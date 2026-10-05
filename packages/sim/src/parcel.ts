@@ -5,7 +5,7 @@ import { createWorld, type World } from './world/world';
 import { OrganismStore, D, DERIVED_COUNT } from './organisms/store';
 import { SpatialGrid } from './organisms/spatial';
 import { computeDerived, refreshMass } from './organisms/derived';
-import { ALLELES_PER_GENOME } from './genetics/genome-map';
+import { ALLELES_PER_GENOME, DELETERIOUS_STRIDE } from './genetics/genome-map';
 import { deleteriousLoad, expressGenome } from './genetics/genome';
 import { sampleFounders, type SpeciesTemplate } from './genetics/templates';
 import { T, TRAIT_COUNT, massFromTrait } from './genetics/traits';
@@ -26,6 +26,11 @@ export interface ParcelOptions {
   seed: string;
   parcelIndex?: number;
   config?: DeepPartial<SimConfig>;
+  /**
+   * Replicate label: same world, different stochastic history (founders,
+   * behaviour, genetics). Used by replicated experiments.
+   */
+  variant?: string;
 }
 
 export interface Region {
@@ -84,10 +89,11 @@ export class ParcelSim {
     this.world = createWorld(root.fork('world'), this.cfg);
     this.org = new OrganismStore(this.cfg.organisms.initialCapacity);
     this.grid = new SpatialGrid(this.cfg.world.width, this.cfg.world.height, 4);
-    this.rngBehavior = root.fork('behavior');
-    this.rngGenetics = root.fork('genetics');
-    this.rngEcology = root.fork('ecology');
-    this.rngSpawn = root.fork('spawn');
+    const life = opts.variant ? root.fork('variant', opts.variant) : root;
+    this.rngBehavior = life.fork('behavior');
+    this.rngGenetics = life.fork('genetics');
+    this.rngEcology = life.fork('ecology');
+    this.rngSpawn = life.fork('spawn');
     this.rngNames = root.fork('names');
     this.strains.add(ENDEMIC_STRAIN);
     this.stats = new StatsRecorder(this);
@@ -187,8 +193,8 @@ export class ParcelSim {
   spawn(
     alleles: Float32Array,
     aOff: number,
-    del0: number,
-    del1: number,
+    delet: Uint32Array,
+    dOff: number,
     species: number,
     lineage: number,
     x: number,
@@ -206,9 +212,8 @@ export class ParcelSim {
     const o = this.org;
     const i = o.allocate();
     o.alleles.set(alleles.subarray(aOff, aOff + ALLELES_PER_GENOME), i * ALLELES_PER_GENOME);
-    o.delet[2 * i] = del0;
-    o.delet[2 * i + 1] = del1;
-    o.delLoad[i] = deleteriousLoad(del0, del1);
+    o.delet.set(delet.subarray(dOff, dOff + DELETERIOUS_STRIDE), i * DELETERIOUS_STRIDE);
+    o.delLoad[i] = deleteriousLoad(o.delet, i * DELETERIOUS_STRIDE);
     o.species[i] = species;
     o.lineage[i] = lineage;
     o.sex[i] = this.rngSpawn.int(2);
@@ -317,8 +322,8 @@ export class ParcelSim {
       const i = this.spawn(
         alleles,
         n * ALLELES_PER_GENOME,
-        delet[2 * n] as number,
-        delet[2 * n + 1] as number,
+        delet,
+        n * DELETERIOUS_STRIDE,
         species,
         lineage,
         x,

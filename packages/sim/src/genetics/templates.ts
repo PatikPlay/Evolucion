@@ -1,7 +1,14 @@
 import type { Rng } from '../rng';
 import { logit } from '../math';
 import { geneticValues } from './genome';
-import { ALLELES_PER_GENOME, DELETERIOUS_LOCI, LOCI, LOCUS_COUNT } from './genome-map';
+import {
+  ALLELES_PER_GENOME,
+  DELETERIOUS_LOCI,
+  DELETERIOUS_STRIDE,
+  DELETERIOUS_WORDS,
+  LOCI,
+  LOCUS_COUNT,
+} from './genome-map';
 import { T, TRAITS, TRAIT_COUNT, TRAIT_INDEX, traitFromMass } from './traits';
 
 export type TraitKey = (typeof TRAITS)[number]['key'];
@@ -136,7 +143,7 @@ export interface FounderGenomes {
   readonly count: number;
   /** count × ALLELES_PER_GENOME */
   readonly alleles: Float32Array;
-  /** count × 2 haplotype masks */
+  /** count × DELETERIOUS_STRIDE words (two haplotypes each) */
   readonly delet: Uint32Array;
 }
 
@@ -159,17 +166,19 @@ export function sampleAround(
   sd: number,
 ): FounderGenomes {
   const alleles = new Float32Array(count * ALLELES_PER_GENOME);
-  const delet = new Uint32Array(count * 2);
+  const delet = new Uint32Array(count * DELETERIOUS_STRIDE);
   // Per-locus deleterious allele frequency (low: harmless in large populations).
   const freqs: number[] = [];
-  for (let k = 0; k < DELETERIOUS_LOCI; k++) freqs.push(0.03 + rng.float() * 0.06);
+  for (let k = 0; k < DELETERIOUS_LOCI; k++) freqs.push(0.02 + rng.float() * 0.04);
   for (let n = 0; n < count; n++) {
     for (let a = 0; a < ALLELES_PER_GENOME; a++)
       alleles[n * ALLELES_PER_GENOME + a] = (means[a] as number) + rng.gaussian(0, sd);
-    for (let h = 0; h < 2; h++) {
-      let mask = 0;
-      for (let k = 0; k < DELETERIOUS_LOCI; k++) if (rng.chance(freqs[k] as number)) mask |= 1 << k;
-      delet[n * 2 + h] = mask >>> 0;
+    for (let k = 0; k < DELETERIOUS_LOCI; k++) {
+      for (let h = 0; h < 2; h++) {
+        if (!rng.chance(freqs[k] as number)) continue;
+        const idx = n * DELETERIOUS_STRIDE + h * DELETERIOUS_WORDS + (k >>> 5);
+        delet[idx] = ((delet[idx] as number) | (1 << (k & 31))) >>> 0;
+      }
     }
   }
   return { count, alleles, delet };

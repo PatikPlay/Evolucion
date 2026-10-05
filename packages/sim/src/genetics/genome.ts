@@ -3,7 +3,8 @@ import { sigmoid } from '../math';
 import {
   ALLELES_PER_GENOME,
   DELETERIOUS_LOCI,
-  DELETERIOUS_MASK,
+  DELETERIOUS_STRIDE,
+  DELETERIOUS_WORDS,
   GENOME_MAP,
   LOCI,
   LOCUS_COUNT,
@@ -124,17 +125,30 @@ export function macroMutate(child: Float32Array, cOff: number, rng: Rng, size: n
   return locus;
 }
 
-/** Inherits one haplotype mask from a parent's two masks (free recombination). */
-export function inheritHaplotype(
-  h0: number,
-  h1: number,
+/**
+ * Writes one haplotype (DELETERIOUS_WORDS words at `dst[dOff]`) inherited from a
+ * parent's two haplotypes at `src[sOff]` (free recombination), with rare new
+ * deleterious mutations.
+ */
+export function inheritDeleterious(
+  src: Uint32Array,
+  sOff: number,
+  dst: Uint32Array,
+  dOff: number,
   rng: Rng,
-  deleteriousRate: number,
-): number {
-  const mask = rng.nextU32() & DELETERIOUS_MASK;
-  let h = ((h0 & mask) | (h1 & ~mask)) & DELETERIOUS_MASK;
-  if (rng.float() < deleteriousRate * DELETERIOUS_LOCI) h |= 1 << rng.int(DELETERIOUS_LOCI);
-  return h >>> 0;
+  mutationRate: number,
+): void {
+  for (let w = 0; w < DELETERIOUS_WORDS; w++) {
+    const mask = rng.nextU32();
+    const h0 = src[sOff + w] as number;
+    const h1 = src[sOff + DELETERIOUS_WORDS + w] as number;
+    dst[dOff + w] = ((h0 & mask) | (h1 & ~mask)) >>> 0;
+  }
+  if (rng.float() < mutationRate * DELETERIOUS_LOCI) {
+    const locus = rng.int(DELETERIOUS_LOCI);
+    const w = locus >>> 5;
+    dst[dOff + w] = ((dst[dOff + w] as number) | (1 << (locus & 31))) >>> 0;
+  }
 }
 
 export function popcount(x: number): number {
@@ -143,9 +157,19 @@ export function popcount(x: number): number {
   return (((x + (x >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
 }
 
-/** Number of loci homozygous for the deleterious allele. */
-export function deleteriousLoad(h0: number, h1: number): number {
-  return popcount((h0 & h1) >>> 0);
+/** Number of loci homozygous for the deleterious allele (genome at `arr[off]`, both haplotypes). */
+export function deleteriousLoad(arr: Uint32Array, off: number): number {
+  let n = 0;
+  for (let w = 0; w < DELETERIOUS_WORDS; w++)
+    n += popcount(((arr[off + w] as number) & (arr[off + DELETERIOUS_WORDS + w] as number)) >>> 0);
+  return n;
+}
+
+/** Number of deleterious allele copies carried (both haplotypes). */
+export function deleteriousCopies(arr: Uint32Array, off: number): number {
+  let n = 0;
+  for (let w = 0; w < DELETERIOUS_STRIDE; w++) n += popcount(arr[off + w] as number);
+  return n;
 }
 
 /** Squared distance between two genomes over the mate-recognition loci (per locus mean). */

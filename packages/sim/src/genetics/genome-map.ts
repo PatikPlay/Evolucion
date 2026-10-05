@@ -222,8 +222,11 @@ export const LOCI: readonly LocusDef[] = [
 export const LOCUS_COUNT = LOCI.length;
 export const ALLELES_PER_GENOME = LOCUS_COUNT * 2;
 /** Number of biallelic recessive-deleterious loci (bits in two 32-bit haplotype masks). */
-export const DELETERIOUS_LOCI = 24;
-export const DELETERIOUS_MASK = (1 << DELETERIOUS_LOCI) - 1;
+/** Recessive deleterious loci, stored as bits: DELETERIOUS_WORDS 32-bit words per haplotype. */
+export const DELETERIOUS_WORDS = 2;
+export const DELETERIOUS_LOCI = DELETERIOUS_WORDS * 32;
+/** Uint32 words per organism (two haplotypes). */
+export const DELETERIOUS_STRIDE = DELETERIOUS_WORDS * 2;
 
 export const LOCUS_INDEX: Readonly<Record<string, number>> = Object.fromEntries(
   LOCI.map((l, i) => [l.key, i]),

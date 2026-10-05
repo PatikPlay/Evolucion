@@ -1,10 +1,10 @@
 import type { ParcelSim } from '../parcel';
 import { D, DERIVED_COUNT } from '../organisms/store';
 import { T, TRAIT_COUNT, litterFromTrait } from '../genetics/traits';
-import { ALLELES_PER_GENOME } from '../genetics/genome-map';
+import { ALLELES_PER_GENOME, DELETERIOUS_STRIDE, DELETERIOUS_WORDS } from '../genetics/genome-map';
 import {
   inheritAlleles,
-  inheritHaplotype,
+  inheritDeleterious,
   macroMutate,
   recognitionDistance2,
 } from '../genetics/genome';
@@ -81,7 +81,7 @@ export function mate(sim: ParcelSim, i: number, j: number): void {
   const base = litterFromTrait(o.pheno[pf + T.LitterSize] as number);
   const n = Math.max(1, Math.round(base * Math.min(1, (o.energy[f] as number) / maxE / 0.8)));
   const alleles = new Float32Array(n * ALLELES_PER_GENOME);
-  const delet = new Uint32Array(n * 2);
+  const delet = new Uint32Array(n * DELETERIOUS_STRIDE);
   const macro = new Int16Array(n).fill(-1);
   const ls = sim.lineage(o.lineage[f] as number);
   const g = cfg.genetics;
@@ -104,15 +104,20 @@ export function mate(sim: ParcelSim, i: number, j: number): void {
     );
     if (rng.float() < g.macroMutationRate * ls.mutationMult)
       macro[k] = macroMutate(alleles, k * ALLELES_PER_GENOME, rng, g.macroMutationSize);
-    delet[2 * k] = inheritHaplotype(
-      o.delet[2 * f] as number,
-      o.delet[2 * f + 1] as number,
+    // One haplotype from each parent.
+    inheritDeleterious(
+      o.delet,
+      f * DELETERIOUS_STRIDE,
+      delet,
+      k * DELETERIOUS_STRIDE,
       rng,
       g.deleteriousMutationRate,
     );
-    delet[2 * k + 1] = inheritHaplotype(
-      o.delet[2 * m] as number,
-      o.delet[2 * m + 1] as number,
+    inheritDeleterious(
+      o.delet,
+      m * DELETERIOUS_STRIDE,
+      delet,
+      k * DELETERIOUS_STRIDE + DELETERIOUS_WORDS,
       rng,
       g.deleteriousMutationRate,
     );
@@ -170,8 +175,8 @@ export function giveBirth(sim: ParcelSim, f: number): void {
     const child = sim.spawn(
       litter.alleles,
       k * ALLELES_PER_GENOME,
-      litter.delet[2 * k] as number,
-      litter.delet[2 * k + 1] as number,
+      litter.delet,
+      k * DELETERIOUS_STRIDE,
       litter.species,
       o.lineage[f] as number,
       x,

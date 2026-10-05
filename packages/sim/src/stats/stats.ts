@@ -2,9 +2,9 @@ import type { ParcelSim } from '../parcel';
 import { D, DERIVED_COUNT } from '../organisms/store';
 import { CAPABILITIES, CAPABILITY_COUNT } from '../organisms/capabilities';
 import { TRAIT_COUNT } from '../genetics/traits';
-import { ALLELES_PER_GENOME, LOCI } from '../genetics/genome-map';
+import { ALLELES_PER_GENOME, DELETERIOUS_STRIDE, LOCI } from '../genetics/genome-map';
 import { DEATH_COUNT, FOOD_COUNT } from '../behavior/actions';
-import { popcount } from '../genetics/genome';
+import { deleteriousCopies } from '../genetics/genome';
 
 /** Event counters accumulated between two samples. */
 export interface PeriodCounters {
@@ -262,7 +262,7 @@ export function censusOf(
     }
     const dl = o.delLoad[i] as number;
     load += dl;
-    delCopies += popcount(o.delet[2 * i] as number) + popcount(o.delet[2 * i + 1] as number);
+    delCopies += deleteriousCopies(o.delet, i * DELETERIOUS_STRIDE);
     if (dl > 0) affected++;
     if (o.infection[i]) infected++;
     cx += o.x[i] as number;

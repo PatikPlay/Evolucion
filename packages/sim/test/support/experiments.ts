@@ -23,15 +23,16 @@ export const EXPERIMENT_CONFIG: DeepPartial<SimConfig> = {
 
 const PREY_LINEAGE = 0;
 /** Predators kept at this share of the prey population during experiment (a). */
-export const PREDATOR_SHARE = 0.1;
+export const PREDATOR_SHARE = 0.12;
 
 export function establish(
   seed: string,
   years: number,
   founders = 80,
   config: DeepPartial<SimConfig> = EXPERIMENT_CONFIG,
+  variant?: string,
 ): { sim: ParcelSim; species: number } {
-  const sim = new ParcelSim({ seed, config });
+  const sim = new ParcelSim({ seed, config, ...(variant ? { variant } : {}) });
   const species = sim.spawnFounders({ key: 'base', traits: {} }, founders, PREY_LINEAGE);
   sim.run(years * TICKS_PER_YEAR);
   return { sim, species };
@@ -130,40 +131,83 @@ function response(
   };
 }
 
-/** (a) Fast predators: prey speed should rise. */
+/** Pools replicate measurements (mean of means, pooled sd, summed n). */
+function pool(xs: Array<{ mean: number; sd: number; n: number }>): {
+  mean: number;
+  sd: number;
+  n: number;
+} {
+  const ok = xs.filter((x) => x.n > 0);
+  if (ok.length === 0) return { mean: 0, sd: 0, n: 0 };
+  return {
+    mean: ok.reduce((a, x) => a + x.mean, 0) / ok.length,
+    sd: Math.sqrt(ok.reduce((a, x) => a + x.sd * x.sd, 0) / ok.length),
+    n: ok.reduce((a, x) => a + x.n, 0),
+  };
+}
+
+/**
+ * (a) Fast predators: prey speed should rise. Replicated lines: `replicates`
+ * treated and as many control populations per seed (same world, independent
+ * histories); the seed's result compares their means.
+ */
 export function fastPredatorExperiment(
   seed: string,
   generations = 10,
   predatorShare = PREDATOR_SHARE,
   config: DeepPartial<SimConfig> = EXPERIMENT_CONFIG,
+  replicates = 3,
 ): ResponseResult {
-  const setupYears = 3;
-  const t = establish(seed, setupYears, 80, config);
-  const c = establish(seed, setupYears, 80, config);
-  const before = derivedStats(t.sim, t.species, D.MaxSpeed);
-  let predSpecies = -1;
-  const years = runGenerations(t.sim, t.species, generations, 16, () => {
-    // Sustained pressure: keep a hunting population present.
-    const preds = predSpecies < 0 ? 0 : t.sim.count({ species: predSpecies });
-    const prey = t.sim.count({ species: t.species });
-    const wanted = Math.max(8, Math.round(prey * predatorShare));
-    if (preds < wanted) {
-      predSpecies = t.sim.spawnFounders(PREDATOR_TEMPLATE, wanted - preds, NPC_LINEAGE_BASE, {
-        ...(predSpecies >= 0 ? { species: predSpecies } : {}),
-        archetype: 'predator',
-        region: { x: t.sim.width / 2, y: t.sim.height / 2, r: 40 },
-      });
-    }
-  });
-  c.sim.run(years * TICKS_PER_YEAR);
-  const treated = derivedStats(t.sim, t.species, D.MaxSpeed);
-  const control = derivedStats(c.sim, c.species, D.MaxSpeed);
-  const prey = t.sim.stats.samples.filter((s) => s.species === t.species);
-  const kills = prey.reduce((a, s) => a + s.period.deaths[2]!, 0);
-  const deaths = prey.reduce((a, s) => a + s.period.deaths.reduce((x, y) => x + y, 0), 0);
+  const setupYears = 5;
+  const treatedStats: Array<{ mean: number; sd: number; n: number }> = [];
+  const controlStats: Array<{ mean: number; sd: number; n: number }> = [];
+  const befores: Array<{ mean: number; sd: number; n: number }> = [];
+  let years = 0;
+  let kills = 0;
+  let deaths = 0;
+  for (let r = 0; r < replicates; r++) {
+    // Paired lines: treated and control start from the very same population.
+    const t = establish(seed, setupYears, 80, config, `r${r}`);
+    const c = establish(seed, setupYears, 80, config, `r${r}`);
+    befores.push(derivedStats(t.sim, t.species, D.MaxSpeed));
+    let predSpecies = -1;
+    const y = runGenerations(t.sim, t.species, generations, 16, () => {
+      // Sustained pressure: keep a hunting population present.
+      const preds = predSpecies < 0 ? 0 : t.sim.count({ species: predSpecies });
+      const prey = t.sim.count({ species: t.species });
+      // Top up hunters while the prey can bear it (a crashed prey population only drifts).
+      const wanted = prey >= 250 ? Math.max(8, Math.round(prey * predatorShare)) : 0;
+      if (preds < wanted) {
+        predSpecies = t.sim.spawnFounders(PREDATOR_TEMPLATE, wanted - preds, NPC_LINEAGE_BASE, {
+          ...(predSpecies >= 0 ? { species: predSpecies } : {}),
+          archetype: 'predator',
+          region: { x: t.sim.width / 2, y: t.sim.height / 2, r: 40 },
+        });
+      }
+    });
+    c.sim.run(y * TICKS_PER_YEAR);
+    years = Math.max(years, y);
+    const ts = derivedStats(t.sim, t.species, D.MaxSpeed);
+    if (ts.n < 10)
+      return response(
+        seed,
+        pool(befores),
+        ts,
+        derivedStats(c.sim, c.species, D.MaxSpeed),
+        y,
+        'replicate extinct',
+      );
+    treatedStats.push(ts);
+    controlStats.push(derivedStats(c.sim, c.species, D.MaxSpeed));
+    const prey = t.sim.stats.samples.filter((s) => s.species === t.species);
+    kills += prey.reduce((a, s) => a + s.period.deaths[2]!, 0);
+    deaths += prey.reduce((a, s) => a + s.period.deaths.reduce((x, z) => x + z, 0), 0);
+  }
+  const treated = pool(treatedStats);
+  const control = pool(controlStats);
   return response(
     seed,
-    before,
+    pool(befores),
     treated,
     control,
     years,
@@ -254,58 +298,55 @@ export function bottleneckExperiment(
   keep = 6,
   smallYears = 3,
   recoveryYears = 1,
+  replicates = 5,
+  setupYears = 7,
 ): BottleneckResult {
-  const setupYears = 4;
-  const t = establish(seed, setupYears);
   const c = establish(seed, setupYears);
-  const b = census(t.sim, t.species);
-  // The survivors are a local group, as after a catastrophe that spared one refuge.
-  const members = t.sim.living({ species: t.species });
-  const anchor = members[t.sim.rngEcology.int(members.length)] as number;
-  t.sim.apply({
-    type: 'cull',
-    species: t.species,
-    keep,
-    balanceSexes: true,
-    near: { x: t.sim.org.x[anchor] as number, y: t.sim.org.y[anchor] as number },
-  });
-  const survivors = t.sim.count({ species: t.species });
-  // Expression of recessives is averaged over the years after the crash: few
-  // individuals carry few copies, so single snapshots are noisy.
-  let exprT = 0;
-  let exprC = 0;
-  let samples = 0;
-  const years = smallYears + recoveryYears;
-  for (let y = 0; y < years; y++) {
-    t.sim.run(TICKS_PER_YEAR);
-    c.sim.run(TICKS_PER_YEAR);
-    if (y < smallYears && t.sim.count({ species: t.species }) > 15)
-      t.sim.apply({ type: 'cull', species: t.species, keep: 15 });
-    const st = census(t.sim, t.species);
-    if (st.count === 0) break;
-    const sc = census(c.sim, c.species);
-    exprT += st.deleteriousExpression;
-    exprC += sc.deleteriousExpression;
-    samples++;
-  }
-  const ct = census(t.sim, t.species);
+  const b = census(c.sim, c.species);
+  c.sim.run((smallYears + recoveryYears) * TICKS_PER_YEAR);
   const cc = census(c.sim, c.species);
+  // Several independent refuges per seed: with six founders each replicate is
+  // largely a lottery of which alleles survive, so the seed's result is their mean.
+  const reps: SpeciesSample[] = [];
+  let survivors = 0;
+  for (let r = 0; r < replicates; r++) {
+    const t = establish(seed, setupYears, 80, EXPERIMENT_CONFIG, `r${r}`);
+    const members = t.sim.living({ species: t.species });
+    const anchor = members[t.sim.rngEcology.int(members.length)] as number;
+    t.sim.apply({
+      type: 'cull',
+      species: t.species,
+      keep,
+      balanceSexes: true,
+      near: { x: t.sim.org.x[anchor] as number, y: t.sim.org.y[anchor] as number },
+    });
+    survivors += t.sim.count({ species: t.species });
+    for (let y = 0; y < smallYears + recoveryYears; y++) {
+      t.sim.run(TICKS_PER_YEAR);
+      if (y < smallYears && t.sim.count({ species: t.species }) > 15)
+        t.sim.apply({ type: 'cull', species: t.species, keep: 15 });
+    }
+    const ct = census(t.sim, t.species);
+    if (ct.count > 0) reps.push(ct);
+  }
+  const avg = (f: (s: SpeciesSample) => number) =>
+    reps.length ? reps.reduce((a, s) => a + f(s), 0) / reps.length : 0;
   return {
     seed,
     diversityBefore: b.diversity,
-    diversityTreated: ct.diversity,
+    diversityTreated: avg((s) => s.diversity),
     diversityControl: cc.diversity,
-    heterozygosityTreated: ct.heterozygosity,
+    heterozygosityTreated: avg((s) => s.heterozygosity),
     heterozygosityControl: cc.heterozygosity,
     affectedBefore: b.deleteriousAffected,
-    affectedTreated: ct.deleteriousAffected,
+    affectedTreated: avg((s) => s.deleteriousAffected),
     affectedControl: cc.deleteriousAffected,
-    loadTreated: ct.deleteriousLoad,
+    loadTreated: avg((s) => s.deleteriousLoad),
     loadControl: cc.deleteriousLoad,
-    expressionTreated: samples ? exprT / samples : 0,
-    expressionControl: samples ? exprC / samples : 0,
-    survivors,
-    countTreated: ct.count,
+    expressionTreated: avg((s) => s.deleteriousExpression),
+    expressionControl: cc.deleteriousExpression,
+    survivors: survivors / replicates,
+    countTreated: reps.length ? Math.round(avg((s) => s.count)) : 0,
   };
 }
 

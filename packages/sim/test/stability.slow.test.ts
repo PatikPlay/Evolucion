@@ -50,13 +50,17 @@ describe('long-run stability (H1)', () => {
       `years=${year} generations=${gen.toFixed(1)} population by year: ${counts.join(' ')}`,
     );
     expect(gen).toBeGreaterThanOrEqual(50);
-    // Persistent and bounded: never extinct, never runaway.
+    // Persistent and stabilised: never extinct; the last decade oscillates within a band.
     expect(Math.min(...counts.slice(5))).toBeGreaterThan(0);
-    const late = counts.slice(-20);
+    const late = counts.slice(-10);
     const mean = late.reduce((a, b) => a + b, 0) / late.length;
-    expect(Math.max(...late)).toBeLessThan(mean * 2.5);
-    // Storage stops growing once the population is at equilibrium.
-    expect(capacities[capacities.length - 1]).toBe(capacities[Math.floor(capacities.length / 2)]);
+    for (const c of late) expect(Math.abs(c - mean)).toBeLessThan(mean * 0.3);
+    // Memory follows the population, not the passage of time: storage is at
+    // most the next power of two above the largest population ever reached.
+    const peak = Math.max(...counts);
+    expect(sim.org.capacity).toBeLessThanOrEqual(
+      Math.max(2048, 2 ** Math.ceil(Math.log2(peak * 1.1))),
+    );
     globalThis.gc?.();
     const heapEnd = process.memoryUsage().heapUsed;
     if (heapMid > 0) expect(heapEnd).toBeLessThan(heapMid * 1.5 + 50e6);

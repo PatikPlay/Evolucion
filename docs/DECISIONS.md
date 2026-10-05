@@ -31,3 +31,24 @@ Formato: **qué** · por qué · alternativas descartadas.
 - **Lista blanca de claves por mensaje** como frontera de la información oculta, además de un test que busca claves prohibidas. Una lista negra sola deja pasar campos nuevos por descuido.
 - **Disposición de parcelas en dos filas que recorren el anillo.** Las vecinas comparten un borde físico, así que los corredores se dibujan como pasos reales.
 - **Preset `batch` para los lotes de equilibrado** (parcelas más pequeñas y rondas más cortas). 200 partidas con el preset normal son decenas de horas de CPU.
+
+## Ajuste de la simulación (H1)
+
+Cada cambio responde a un fallo medido, no a un número deseado.
+
+- **Rebrote desde reservas subterráneas** (`rootStock`): el crecimiento logístico puro dejaba las celdas sobrepastoreadas sin recuperarse en toda la estación. Las plantas reales rebrotan desde raíces y bancos de semillas. · Alternativa: más productividad (no arreglaba el bloqueo local).
+- **Normalización de parcelas por valor alimenticio** (pasto, ramoneo, fruto y poco dosel o algas), no por biomasa total. Los bosques sostienen mucha más fauna por su fruto, y la estimación antigua lo ignoraba. Queda una diferencia estructural de capacidad real entre parcelas (agua, disposición): se calibrará empíricamente al crear la partida (H3/H5).
+- **Depredación ambiental de fondo** (rapaces y serpientes como campo, no individuos): sin ella, ser pequeño no tenía coste y la masa se desplomaba. Castiga lo pequeño, visible y descuidado; se mitiga con oído, miedo, grupo y velocidad.
+- **Competencia por interferencia**: los individuos más pesados desplazan a los pequeños de los parches (jerarquía de dominancia). Sin ella la selección favorecía siempre el tamaño mínimo (ventaja r) y las poblaciones llegaban a ~4800. Con ella el tamaño responde a la densidad (selección r/K) y ya no hay tendencia universal.
+- **Principio de Jarman–Bell** (los grandes digieren mejor la fibra) y velocidad ∝ m^0,1: equilibran el tamaño sin que la masa domine la velocidad (la longitud de patas es la principal fuente heredable de velocidad, que además es lo visible).
+- **Dispersión natal con selección de hábitat**, sesgada hacia los machos, y **evitación de parientes** al elegir pareja; **localización de pareja a distancia** por olfato y llamadas. Sin ellas las colonias esquilmaban su zona, se aislaban o se volvían muy endogámicas.
+- **Caza realista**: rastreo olfativo, acecho lento poco visible, sprint corto (más largo si el cazador es claramente más rápido: cazadores de carrera), la presa huye en cuanto ve la carga, captura casi segura si la alcanza (la defensa está en no ser alcanzada o en la coraza), elección de presas lentas, y **la carne vale ~2× la hierba**. Se corrigió además un fallo de utilidad: el cazador abandonaba el cadáver recién cazado para volver a cazar.
+- **Fundadores con estructura de edades** (30 % juveniles): una cohorte de adultos de la misma edad envejecía a la vez y hundía la colonia en el año 2–3.
+
+## Diseño de los experimentos de selección (H1)
+
+- Parcela de laboratorio algo más rica (`targetProductivityPerCell` 9) para tener poblaciones medibles; tratamiento y control comparten semilla y se comparan entre sí.
+- (a) Depredadores de carrera mantenidos al 10 % de la población de presas (presión sostenida). Éxito: velocidad ≥ 0,2 DE por encima del control.
+- (b) Anomalía de −5 °C. Éxito: tolerancia efectiva al frío (−límite inferior de confort, que integra genes de tolerancia, pelaje, grasa y tamaño) ≥ 0,2 DE sobre el control. Una extinción cuenta como fallo.
+- (c) Rasgos neutros sin pleiotropía ni condiciones activas: la media de sus cambios entre semillas no se distingue de cero (|t| < 2,1) y sí cambian.
+- (d) Cuello de botella clásico de genética de la conservación: 6 supervivientes (3+3) de un refugio local, población ≤ 15 durante 3 años y 1 de recuperación. Éxito: diversidad < 0,85× y carga homocigota > 1,3× el control. Está cerca del umbral porque, con tan pocos fundadores, a veces la deriva purga los alelos deletéreos: también eso es biología real.

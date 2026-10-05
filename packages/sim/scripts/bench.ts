@@ -29,9 +29,16 @@ while (sim.org.liveCount < target && years < 60) {
 if (sim.org.liveCount > target) sim.apply({ type: 'cull', keep: target });
 const start = sim.org.liveCount;
 const ticks = Number(values.ticks);
+let cullTime = 0n;
 const t0 = process.hrtime.bigint();
-sim.run(ticks);
-const s = Number(process.hrtime.bigint() - t0) / 1e9;
+for (let done = 0; done < ticks; done += 200) {
+  sim.run(Math.min(200, ticks - done));
+  // Hold the population near the target so the timing is comparable.
+  const c0 = process.hrtime.bigint();
+  if (sim.org.liveCount > target * 1.05) sim.apply({ type: 'cull', keep: target });
+  cullTime += process.hrtime.bigint() - c0;
+}
+const s = Number(process.hrtime.bigint() - t0 - cullTime) / 1e9;
 const mean = (start + sim.org.liveCount) / 2;
 console.log(
   `organisms ${start} → ${sim.org.liveCount} (mean ~${Math.round(mean)}) ticks ${ticks}: ${s.toFixed(2)} s (${((s / ticks) * 1000).toFixed(2)} ms/tick, ${((s / ticks / mean) * 1e6).toFixed(2)} µs/organism-tick)`,

@@ -1,4 +1,4 @@
-import { ALLELES_PER_GENOME } from '../genetics/genome-map';
+import { ALLELES_PER_GENOME, DELETERIOUS_STRIDE } from '../genetics/genome-map';
 import { TRAIT_COUNT } from '../genetics/traits';
 
 /** Quantities derived once per organism from its phenotype (some refreshed as juveniles grow). */
@@ -164,7 +164,7 @@ export class OrganismStore {
     ['huddle', Uint8Array, 1],
     ['feedShare', Float32Array, 1],
     ['alleles', Float32Array, ALLELES_PER_GENOME],
-    ['delet', Uint32Array, 2],
+    ['delet', Uint32Array, DELETERIOUS_STRIDE],
     ['pheno', Float32Array, TRAIT_COUNT],
     ['derived', Float32Array, DERIVED_COUNT],
   ];

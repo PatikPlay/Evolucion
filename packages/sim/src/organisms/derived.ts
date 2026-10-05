@@ -17,7 +17,7 @@ export function computeDerived(s: OrganismStore, i: number, cfg: SimConfig): voi
   const legs = legsFromTrait(tr(T.LegCount));
   const metab = tr(T.Metabolism);
   const sizeRatio = adultMass / 4;
-  const massFactor = Math.min(1.35, Math.max(0.7, Math.pow(sizeRatio, 0.1)));
+
   d[q + D.AdultMassPotential] = adultMass;
   d[q + D.Legs] = legs;
   d[q + D.MaxSpeed] =
@@ -27,8 +27,7 @@ export function computeDerived(s: OrganismStore, i: number, cfg: SimConfig): voi
     (1 - 0.45 * tr(T.Armor)) *
     (0.8 + 0.4 * metab) *
     (1 - 0.2 * tr(T.Fins)) *
-    (1 - 0.1 * tr(T.Membranes)) *
-    massFactor;
+    (1 - 0.1 * tr(T.Membranes));
   d[q + D.Strength] = (0.6 + 0.6 * tr(T.LegStrength)) * (0.75 + 0.5 * tr(T.Aggression));
   d[q + D.Perception] =
     cfg.organisms.basePerception * (0.6 + 0.9 * tr(T.EyeSize)) +

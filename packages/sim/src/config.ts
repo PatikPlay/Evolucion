@@ -123,7 +123,7 @@ export const DEFAULT_SIM_CONFIG = {
     mutationRate: 0.012,
     mutationSd: 0.22,
     recognitionMutationMult: 3,
-    deleteriousMutationRate: 0.0006,
+    deleteriousMutationRate: 0.0001,
     macroMutationRate: 1 / 1500,
     macroMutationSize: 3,
     /** Cryptic loci contribute this fraction of their effect under normal (canalised) conditions. */
@@ -131,7 +131,7 @@ export const DEFAULT_SIM_CONFIG = {
     /** Standing variation (allele sd) in founder populations. */
     standingVariation: 0.4,
     /** Viability lost per homozygous deleterious locus. */
-    deleteriousPenalty: 0.14,
+    deleteriousPenalty: 0.07,
   },
   predation: {
     reach: 0.7,

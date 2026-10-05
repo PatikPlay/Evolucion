@@ -19,22 +19,22 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecho.
 
 Interfaces primero: `sim` expone `createParcel(spec)`, `ParcelSim.step()`, `applyCommand()`, `stats`, `serialize()`.
 
-- [ ] Terreno procedural (ruido, biomas, agua, río) + normalización de capacidad (±10 %).
-- [ ] Vegetación logística (4 tipos), estaciones, clima por celda y noche.
-- [ ] Fauna de fondo (campos de densidad).
-- [ ] Almacén de organismos SoA con ranuras libres, rejilla espacial.
-- [ ] Genoma diploide, mapa genético (pleiotropía, latentes, crípticos, reconocimiento), deletéreos, mutación y macromutación.
-- [ ] Fenotipo y desarrollo; rasgos derivados.
-- [ ] Energía, sed, temperatura, salud, envejecimiento y causas de muerte.
-- [ ] IA de utilidad: percepción, acciones básicas (comer, beber, huir, cazar, carroñear, cortejar, descansar, explorar, grupo, esconderse) y movimiento.
-- [ ] Reproducción sexual, gestación, camadas, cuidado parental.
-- [ ] Depredación, combate, carroña, toxinas, aposematismo.
-- [ ] Enfermedades (cepas, contagio por densidad, inmunidad).
-- [ ] Generador de fundadores con presupuesto y plantillas NPC (depredador rápido para los experimentos).
-- [ ] Estadísticas ocultas por especie y registro de causas de muerte.
-- [ ] Experimentos de selección (a)–(d) sobre 20 semillas, ≥ 80 % aprobados.
-- [ ] Estabilidad: sin NaN ni crecimiento de memoria en 50 generaciones; población estable sin topes.
-- [ ] `pnpm sim:bench` con el objetivo de < 25 s por ronda y parcela de 1500.
+- [x] Terreno procedural (ruido, biomas, agua, río) + normalización de capacidad (±10 %).
+- [x] Vegetación logística (4 tipos), estaciones, clima por celda y noche.
+- [x] Fauna de fondo (campos de densidad).
+- [x] Almacén de organismos SoA con ranuras libres, rejilla espacial.
+- [x] Genoma diploide, mapa genético (pleiotropía, latentes, crípticos, reconocimiento), deletéreos, mutación y macromutación.
+- [x] Fenotipo y desarrollo; rasgos derivados.
+- [x] Energía, sed, temperatura, salud, envejecimiento y causas de muerte.
+- [x] IA de utilidad: percepción, acciones básicas (comer, beber, huir, cazar, carroñear, cortejar, descansar, explorar, grupo, esconderse) y movimiento.
+- [x] Reproducción sexual, gestación, camadas, cuidado parental.
+- [x] Depredación, combate, carroña, toxinas, aposematismo.
+- [x] Enfermedades (cepas, contagio por densidad, inmunidad).
+- [x] Generador de fundadores con presupuesto y plantillas NPC (depredador rápido para los experimentos).
+- [x] Estadísticas ocultas por especie y registro de causas de muerte.
+- [x] Experimentos de selección (a)–(d) sobre 20 semillas, ≥ 80 % aprobados.
+- [x] Estabilidad: sin NaN ni crecimiento de memoria en 50 generaciones; población estable sin topes.
+- [x] `pnpm sim:bench` con el objetivo de < 25 s por ronda y parcela de 1500.
 
 ## H2 · Verlo
 

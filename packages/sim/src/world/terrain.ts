@@ -15,7 +15,15 @@ export const enum Biome {
 
 export const BIOME_COUNT = 7;
 
-export const BIOME_NAMES = ['grassland', 'forest', 'shrubland', 'sand', 'rock', 'shallow', 'deep'] as const;
+export const BIOME_NAMES = [
+  'grassland',
+  'forest',
+  'shrubland',
+  'sand',
+  'rock',
+  'shallow',
+  'deep',
+] as const;
 
 /** Plant capacity multipliers per biome: [grass, shrub, tree, algae]. */
 export const BIOME_PLANTS: ReadonlyArray<readonly [number, number, number, number]> = [
@@ -130,14 +138,17 @@ export function generateTerrain(rng: Rng, cfg: SimConfig): Terrain {
       if (e > emax) emax = e;
     }
   }
-  for (let i = 0; i < t.size; i++) t.elevation[i] = ((t.elevation[i] as number) - emin) / (emax - emin);
+  for (let i = 0; i < t.size; i++)
+    t.elevation[i] = ((t.elevation[i] as number) - emin) / (emax - emin);
 
   // Lakes: the lowest cells.
   const isWaterCell = new Uint8Array(t.size);
   const sorted = Array.from(t.elevation).sort((a, b) => a - b);
   const lakeFraction = cfg.world.waterFraction * 0.62;
   const lakeLevel = sorted[Math.floor(lakeFraction * t.size)] as number;
-  const deepLevel = sorted[Math.floor(lakeFraction * cfg.world.deepFraction * 1.6 * t.size)] as number;
+  const deepLevel = sorted[
+    Math.floor(lakeFraction * cfg.world.deepFraction * 1.6 * t.size)
+  ] as number;
   for (let i = 0; i < t.size; i++) {
     const e = t.elevation[i] as number;
     if (e < lakeLevel) {
@@ -174,7 +185,8 @@ export function generateTerrain(rng: Rng, cfg: SimConfig): Terrain {
         if (x < 0 || y < 0 || x >= w || y >= h) continue;
         const dx = x + 0.5 - px;
         const dy = y + 0.5 - py;
-        if (dx * dx + dy * dy <= r * r) isWaterCell[y * w + x] = Math.max(isWaterCell[y * w + x] as number, 1);
+        if (dx * dx + dy * dy <= r * r)
+          isWaterCell[y * w + x] = Math.max(isWaterCell[y * w + x] as number, 1);
       }
     }
   }
@@ -192,7 +204,8 @@ export function generateTerrain(rng: Rng, cfg: SimConfig): Terrain {
 
   // Biomes.
   let landMax = 0;
-  for (let i = 0; i < t.size; i++) if (!isWaterCell[i]) landMax = Math.max(landMax, t.elevation[i] as number);
+  for (let i = 0; i < t.size; i++)
+    if (!isWaterCell[i]) landMax = Math.max(landMax, t.elevation[i] as number);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
@@ -222,7 +235,9 @@ export function generateTerrain(rng: Rng, cfg: SimConfig): Terrain {
       const i = y * w + x;
       const n = detailNoise.fbm(x / 13 + 70, y / 13 + 9, 2);
       t.fertility[i] = 0.7 + 0.6 * n;
-      const landElev = isWaterCell[i] ? 0 : Math.max(0, ((t.elevation[i] as number) - lakeLevel) / (1 - lakeLevel));
+      const landElev = isWaterCell[i]
+        ? 0
+        : Math.max(0, ((t.elevation[i] as number) - lakeLevel) / (1 - lakeLevel));
       t.baseTemp[i] = cfg.climate.baseTemperature - cfg.climate.elevationCooling * landElev;
     }
   }

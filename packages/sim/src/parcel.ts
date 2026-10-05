@@ -106,7 +106,14 @@ export class ParcelSim {
   lineage(id: number): LineageState {
     let l = this.lineages.get(id);
     if (!l) {
-      l = { custom: Custom.None, canalisation: this.cfg.genetics.canalisation, mutationMult: 1, selectTrait: -1, selectDir: 0, feeding: 0 };
+      l = {
+        custom: Custom.None,
+        canalisation: this.cfg.genetics.canalisation,
+        mutationMult: 1,
+        selectTrait: -1,
+        selectDir: 0,
+        feeding: 0,
+      };
       this.lineages.set(id, l);
     }
     return l;
@@ -126,7 +133,12 @@ export class ParcelSim {
       execute(this, i);
       if (!o.alive[i]) continue;
       updatePhysiology(this, i);
-      if (o.alive[i] && (o.flags[i] as number) & Flag.Pregnant && tick >= (o.pregnantUntil[i] as number)) giveBirth(this, i);
+      if (
+        o.alive[i] &&
+        (o.flags[i] as number) & Flag.Pregnant &&
+        tick >= (o.pregnantUntil[i] as number)
+      )
+        giveBirth(this, i);
     }
     if (tick % this.cfg.stats.interval === 0) this.stats.sample();
     this.tick++;
@@ -159,7 +171,13 @@ export class ParcelSim {
 
   /** Creates a new species record with a generated name. */
   newSpecies(lineage: number, parent = 0, archetype = '', name?: string) {
-    return this.species.create(lineage, parent, name ?? speciesName(this.rngNames), this.tick, archetype);
+    return this.species.create(
+      lineage,
+      parent,
+      name ?? speciesName(this.rngNames),
+      this.tick,
+      archetype,
+    );
   }
 
   /**
@@ -175,7 +193,15 @@ export class ParcelSim {
     lineage: number,
     x: number,
     y: number,
-    opts: { adult: boolean; generation?: number; motherId?: number; fatherId?: number; motherIdx?: number; birthMassFrac?: number; macro?: boolean },
+    opts: {
+      adult: boolean;
+      generation?: number;
+      motherId?: number;
+      fatherId?: number;
+      motherIdx?: number;
+      birthMassFrac?: number;
+      macro?: boolean;
+    },
   ): number {
     const o = this.org;
     const i = o.allocate();
@@ -212,7 +238,8 @@ export class ParcelSim {
     if (opts.adult) {
       const mat = o.derived[q + D.Maturity] as number;
       const life = o.derived[q + D.Lifespan] as number;
-      o.birthTick[i] = this.tick - Math.floor(mat + this.rngSpawn.float() * Math.max(1, life * 0.4 - mat * 0.3));
+      o.birthTick[i] =
+        this.tick - Math.floor(mat + this.rngSpawn.float() * Math.max(1, life * 0.4 - mat * 0.3));
     } else {
       o.birthTick[i] = this.tick;
     }
@@ -231,22 +258,88 @@ export class ParcelSim {
   }
 
   /** Spawns a founder population from a template. Returns the species id. */
-  spawnFounders(tpl: SpeciesTemplate, count: number, lineage: number, opts: { region?: Region; species?: number; name?: string; archetype?: string } = {}): number {
+  spawnFounders(
+    tpl: SpeciesTemplate,
+    count: number,
+    lineage: number,
+    opts: {
+      region?: Region;
+      species?: number;
+      name?: string;
+      archetype?: string;
+      juvenileShare?: number;
+    } = {},
+  ): number {
     const sp = opts.species ?? this.newSpecies(lineage, 0, opts.archetype ?? '', opts.name).id;
     const ls = this.lineage(lineage);
-    const genomes = sampleFounders(tpl, count, this.rngGenetics.fork('founders', sp, this.tick), ls.canalisation, this.cfg.genetics.standingVariation);
+    const genomes = sampleFounders(
+      tpl,
+      count,
+      this.rngGenetics.fork('founders', sp, this.tick),
+      ls.canalisation,
+      this.cfg.genetics.standingVariation,
+    );
     // Founders arrive together, as a small colony in a habitable spot.
     const region = opts.region ?? this.colonySite(14);
-    this.spawnGenomes(genomes.alleles, genomes.delet, genomes.count, sp, lineage, region, true);
+    this.spawnGenomes(
+      genomes.alleles,
+      genomes.delet,
+      genomes.count,
+      sp,
+      lineage,
+      region,
+      true,
+      opts.juvenileShare ?? 0.3,
+    );
     return sp;
   }
 
-  /** Spawns pre-made genomes (founders, colonists, migrants). */
-  spawnGenomes(alleles: Float32Array, delet: Uint32Array, count: number, species: number, lineage: number, region: Region | undefined, adult: boolean): number[] {
+  /**
+   * Spawns pre-made genomes (founders, colonists, migrants). With
+   * `juvenileShare`, part of the group are youngsters at various stages, as
+   * in any natural population (a single-age cohort would age out at once).
+   */
+  spawnGenomes(
+    alleles: Float32Array,
+    delet: Uint32Array,
+    count: number,
+    species: number,
+    lineage: number,
+    region: Region | undefined,
+    adult: boolean,
+    juvenileShare = 0,
+  ): number[] {
     const slots: number[] = [];
+    const o = this.org;
     for (let n = 0; n < count; n++) {
       const [x, y] = this.randomLandPoint(region);
-      slots.push(this.spawn(alleles, n * ALLELES_PER_GENOME, delet[2 * n] as number, delet[2 * n + 1] as number, species, lineage, x, y, { adult }));
+      const young = adult && juvenileShare > 0 && this.rngSpawn.float() < juvenileShare;
+      const i = this.spawn(
+        alleles,
+        n * ALLELES_PER_GENOME,
+        delet[2 * n] as number,
+        delet[2 * n + 1] as number,
+        species,
+        lineage,
+        x,
+        y,
+        {
+          adult: adult && !young,
+        },
+      );
+      if (young) {
+        const q = i * DERIVED_COUNT;
+        const f = 0.3 + 0.6 * this.rngSpawn.float();
+        const maturity = o.derived[q + D.Maturity] as number;
+        o.birthTick[i] = this.tick - Math.floor(f * maturity);
+        const pot = o.derived[q + D.AdultMassPotential] as number;
+        o.mass[i] =
+          (o.birthMass[i] as number) + (pot * 0.85 - (o.birthMass[i] as number)) * Math.pow(f, 0.9);
+        o.nutrition[i] = 0.7;
+        refreshMass(o, i, this.cfg);
+        o.energy[i] = (o.derived[q + D.MaxEnergy] as number) * 0.8;
+      }
+      slots.push(i);
     }
     return slots;
   }
@@ -260,10 +353,17 @@ export class ParcelSim {
       const [x, y] = this.randomLandPoint();
       const c = t.index(x, y);
       const veg = this.world.vegetation;
-      const food = (veg.capacity[0] as Float32Array)[c]! + (veg.capacity[1] as Float32Array)[c]! + veg.fruit[c]!;
+      const food =
+        (veg.capacity[0] as Float32Array)[c]! +
+        (veg.capacity[1] as Float32Array)[c]! +
+        veg.fruit[c]!;
       const water = this.world.access.waterDistance[c] as number;
       const edge = Math.min(x, y, t.width - x, t.height - y);
-      const score = Math.min(food, 25) - 2 * Math.max(0, water - 5) + Math.min(0, edge - radius) + this.rngSpawn.float();
+      const score =
+        Math.min(food, 25) -
+        2 * Math.max(0, water - 5) +
+        Math.min(0, edge - radius) +
+        this.rngSpawn.float();
       if (score > bestScore) {
         bestScore = score;
         best = { x, y, r: radius };
@@ -304,7 +404,14 @@ export class ParcelSim {
     this.stats.onDeath(i, cause);
     this.moments.onDeath(this, i, cause);
     if (leaveCarcass && cause !== Death.Culled) {
-      this.world.carcasses.add(o.x[i] as number, o.y[i] as number, (o.mass[i] as number) * this.cfg.predation.meatPerMass * 0.7, this.trait(i, T.ToxinProduction), o.lineage[i] as number, this.trait(i, T.Hue));
+      this.world.carcasses.add(
+        o.x[i] as number,
+        o.y[i] as number,
+        (o.mass[i] as number) * this.cfg.predation.meatPerMass * 0.7,
+        this.trait(i, T.ToxinProduction),
+        o.lineage[i] as number,
+        this.trait(i, T.Hue),
+      );
     }
     this.pendingLitters.delete(o.id[i] as number);
     const sp = o.species[i] as number;
@@ -332,10 +439,17 @@ export class ParcelSim {
   stateHash(): number {
     const o = this.org;
     const h = new StateHasher().number(this.tick).number(o.high).number(o.liveCount);
-    h.typedPrefix(o.alive, o.high).typedPrefix(o.id, o.high).typedPrefix(o.x, o.high).typedPrefix(o.y, o.high);
-    h.typedPrefix(o.energy, o.high).typedPrefix(o.health, o.high).typedPrefix(o.alleles, o.high * ALLELES_PER_GENOME);
+    h.typedPrefix(o.alive, o.high)
+      .typedPrefix(o.id, o.high)
+      .typedPrefix(o.x, o.high)
+      .typedPrefix(o.y, o.high);
+    h.typedPrefix(o.energy, o.high)
+      .typedPrefix(o.health, o.high)
+      .typedPrefix(o.alleles, o.high * ALLELES_PER_GENOME);
     for (const b of this.world.vegetation.biomass) h.typed(b);
-    h.typed(new Uint32Array(this.rngBehavior.getState())).typed(new Uint32Array(this.rngGenetics.getState()));
+    h.typed(new Uint32Array(this.rngBehavior.getState())).typed(
+      new Uint32Array(this.rngGenetics.getState()),
+    );
     return h.digest();
   }
 }

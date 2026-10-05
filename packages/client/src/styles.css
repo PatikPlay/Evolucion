@@ -1,0 +1,111 @@
+:root {
+  --paper: #f1e7d0;
+  --ink: #2b2420;
+  --wash: rgba(250, 244, 230, 0.92);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  color: var(--ink);
+}
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  overflow: hidden;
+}
+.app {
+  position: relative;
+  height: 100%;
+}
+.world {
+  position: absolute;
+  inset: 0;
+}
+.viewer,
+.clock,
+.card,
+.debug-overlay,
+.toast {
+  position: absolute;
+  background: var(--wash);
+  border: 1px solid rgba(43, 36, 32, 0.35);
+  border-radius: 6px;
+  box-shadow: 2px 3px 0 rgba(43, 36, 32, 0.12);
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.viewer {
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 240px;
+}
+.viewer input,
+.viewer select {
+  width: 120px;
+  font: inherit;
+}
+.clock {
+  top: 10px;
+  right: 10px;
+}
+.card {
+  top: 54px;
+  right: 10px;
+  width: 260px;
+}
+.card h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.card .species {
+  margin: 2px 0;
+}
+.portrait {
+  width: 160px;
+  height: 160px;
+  display: block;
+  margin: 0 auto;
+}
+.row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+button {
+  font: inherit;
+  background: #fbf6ea;
+  border: 1px solid rgba(43, 36, 32, 0.5);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+button.on {
+  background: var(--ink);
+  color: var(--paper);
+}
+.toast {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.debug-overlay {
+  bottom: 10px;
+  left: 10px;
+  max-height: 40%;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  background: rgba(255, 255, 240, 0.95);
+}
+.debug {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  max-height: 200px;
+  overflow: auto;
+}

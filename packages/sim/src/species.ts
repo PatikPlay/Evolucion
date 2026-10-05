@@ -24,7 +24,17 @@ export class SpeciesRegistry {
   private next = 1;
 
   create(lineage: number, parent: number, name: string, tick: number, archetype = ''): SpeciesInfo {
-    const sp: SpeciesInfo = { id: this.next++, lineage, parent, name, bornTick: tick, extinctTick: -1, capsSeen: 0, capsCommon: 0, archetype };
+    const sp: SpeciesInfo = {
+      id: this.next++,
+      lineage,
+      parent,
+      name,
+      bornTick: tick,
+      extinctTick: -1,
+      capsSeen: 0,
+      capsCommon: 0,
+      archetype,
+    };
     this.list.push(sp);
     return sp;
   }
@@ -43,16 +53,51 @@ export class SpeciesRegistry {
   }
 }
 
-const SYLLABLES_A = ['ca', 'lo', 'mi', 'ra', 'te', 'xu', 'fe', 'no', 'pa', 'si', 've', 'tu', 'gra', 'phy', 'chi', 'lu', 'dor', 'mar', 'ri', 'zo'];
-const SYLLABLES_B = ['li', 'ra', 'ne', 'to', 'sa', 'mo', 'di', 'cu', 'pe', 'va', 'ri', 'go', 'thi', 'xa'];
+const SYLLABLES_A = [
+  'ca',
+  'lo',
+  'mi',
+  'ra',
+  'te',
+  'xu',
+  'fe',
+  'no',
+  'pa',
+  'si',
+  've',
+  'tu',
+  'gra',
+  'phy',
+  'chi',
+  'lu',
+  'dor',
+  'mar',
+  'ri',
+  'zo',
+];
+const SYLLABLES_B = [
+  'li',
+  'ra',
+  'ne',
+  'to',
+  'sa',
+  'mo',
+  'di',
+  'cu',
+  'pe',
+  'va',
+  'ri',
+  'go',
+  'thi',
+  'xa',
+];
 const GENUS_END = ['us', 'ia', 'on', 'ax', 'ops', 'ella', 'odon', 'urus', 'ix', 'ides'];
 const EPITHET_END = ['ensis', 'atus', 'icus', 'osa', 'alis', 'ifer', 'oides', 'inus', 'ina', 'ens'];
 
 /** Generates a pseudo-Latin binomial name, e.g. "Calorax velatus". */
 export function speciesName(rng: Rng, genus?: string): string {
   const g =
-    genus ??
-    capitalise(rng.pick(SYLLABLES_A) + rng.pick(SYLLABLES_B) + rng.pick(GENUS_END));
+    genus ?? capitalise(rng.pick(SYLLABLES_A) + rng.pick(SYLLABLES_B) + rng.pick(GENUS_END));
   const e = rng.pick(SYLLABLES_A) + rng.pick(SYLLABLES_B) + rng.pick(EPITHET_END);
   return `${g} ${e}`;
 }

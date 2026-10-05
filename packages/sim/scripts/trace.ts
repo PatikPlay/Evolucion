@@ -15,4 +15,24 @@ for (let t = 0; t < ticks; t++) {
   console.log(`t=${t} live=${sim.org.liveCount} ${parts.join(' | ')}`);
 }
 const i = 0;
-console.log('maxE', sim.der(i, D.MaxEnergy), 'm075', sim.der(i, D.M075), 'upkeep', sim.der(i, D.UpkeepMult), 'metab', sim.der(i, D.MetabolicRate), 'maxSpeed', sim.der(i, D.MaxSpeed), 'effGrass', sim.der(i, D.EffGrass), 'comfort', sim.der(i, D.ComfortLow), sim.der(i, D.ComfortHigh), 'maturity', sim.der(i, D.Maturity), 'life', sim.der(i, D.Lifespan));
+console.log(
+  'maxE',
+  sim.der(i, D.MaxEnergy),
+  'm075',
+  sim.der(i, D.M075),
+  'upkeep',
+  sim.der(i, D.UpkeepMult),
+  'metab',
+  sim.der(i, D.MetabolicRate),
+  'maxSpeed',
+  sim.der(i, D.MaxSpeed),
+  'effGrass',
+  sim.der(i, D.EffGrass),
+  'comfort',
+  sim.der(i, D.ComfortLow),
+  sim.der(i, D.ComfortHigh),
+  'maturity',
+  sim.der(i, D.Maturity),
+  'life',
+  sim.der(i, D.Lifespan),
+);

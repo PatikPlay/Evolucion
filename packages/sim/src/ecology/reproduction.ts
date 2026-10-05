@@ -2,7 +2,12 @@ import type { ParcelSim } from '../parcel';
 import { D, DERIVED_COUNT } from '../organisms/store';
 import { T, TRAIT_COUNT, litterFromTrait } from '../genetics/traits';
 import { ALLELES_PER_GENOME } from '../genetics/genome-map';
-import { inheritAlleles, inheritHaplotype, macroMutate, recognitionDistance2 } from '../genetics/genome';
+import {
+  inheritAlleles,
+  inheritHaplotype,
+  macroMutate,
+  recognitionDistance2,
+} from '../genetics/genome';
 import { Flag } from '../behavior/actions';
 import { hueDistance } from '../math';
 
@@ -25,11 +30,19 @@ export interface Litter {
 export function compatibility(sim: ParcelSim, a: number, b: number): number {
   const o = sim.org;
   const scale = sim.cfg.reproduction.compatibilityScale;
-  const rd = recognitionDistance2(o.alleles, a * ALLELES_PER_GENOME, o.alleles, b * ALLELES_PER_GENOME);
+  const rd = recognitionDistance2(
+    o.alleles,
+    a * ALLELES_PER_GENOME,
+    o.alleles,
+    b * ALLELES_PER_GENOME,
+  );
   const pa = a * TRAIT_COUNT;
   const pb = b * TRAIT_COUNT;
   const hue = hueDistance(o.pheno[pa + T.Hue] as number, o.pheno[pb + T.Hue] as number) * 2;
-  const size = Math.log((o.derived[a * DERIVED_COUNT + D.AdultMassPotential] as number) / (o.derived[b * DERIVED_COUNT + D.AdultMassPotential] as number));
+  const size = Math.log(
+    (o.derived[a * DERIVED_COUNT + D.AdultMassPotential] as number) /
+      (o.derived[b * DERIVED_COUNT + D.AdultMassPotential] as number),
+  );
   const d2 = rd + 0.5 * (hue * hue + size * size * 0.5);
   return Math.exp(-d2 / (scale * scale));
 }
@@ -37,7 +50,12 @@ export function compatibility(sim: ParcelSim, a: number, b: number): number {
 function receptive(sim: ParcelSim, i: number, female: boolean): boolean {
   const o = sim.org;
   const cfg = sim.cfg.reproduction;
-  if (!sim.isAdult(i) || sim.tick < (o.cooldownUntil[i] as number) || (o.flags[i] as number) & Flag.Pregnant) return false;
+  if (
+    !sim.isAdult(i) ||
+    sim.tick < (o.cooldownUntil[i] as number) ||
+    (o.flags[i] as number) & Flag.Pregnant
+  )
+    return false;
   const frac = (o.energy[i] as number) / (o.derived[i * DERIVED_COUNT + D.MaxEnergy] as number);
   return frac > (female ? cfg.breedEnergy : cfg.maleBreedEnergy);
 }
@@ -74,10 +92,30 @@ export function mate(sim: ParcelSim, i: number, j: number): void {
     deleteriousRate: g.deleteriousMutationRate,
   };
   for (let k = 0; k < n; k++) {
-    inheritAlleles(o.alleles, f * ALLELES_PER_GENOME, o.alleles, m * ALLELES_PER_GENOME, alleles, k * ALLELES_PER_GENOME, rng, mut);
-    if (rng.float() < g.macroMutationRate * ls.mutationMult) macro[k] = macroMutate(alleles, k * ALLELES_PER_GENOME, rng, g.macroMutationSize);
-    delet[2 * k] = inheritHaplotype(o.delet[2 * f] as number, o.delet[2 * f + 1] as number, rng, g.deleteriousMutationRate);
-    delet[2 * k + 1] = inheritHaplotype(o.delet[2 * m] as number, o.delet[2 * m + 1] as number, rng, g.deleteriousMutationRate);
+    inheritAlleles(
+      o.alleles,
+      f * ALLELES_PER_GENOME,
+      o.alleles,
+      m * ALLELES_PER_GENOME,
+      alleles,
+      k * ALLELES_PER_GENOME,
+      rng,
+      mut,
+    );
+    if (rng.float() < g.macroMutationRate * ls.mutationMult)
+      macro[k] = macroMutate(alleles, k * ALLELES_PER_GENOME, rng, g.macroMutationSize);
+    delet[2 * k] = inheritHaplotype(
+      o.delet[2 * f] as number,
+      o.delet[2 * f + 1] as number,
+      rng,
+      g.deleteriousMutationRate,
+    );
+    delet[2 * k + 1] = inheritHaplotype(
+      o.delet[2 * m] as number,
+      o.delet[2 * m + 1] as number,
+      rng,
+      g.deleteriousMutationRate,
+    );
   }
   const litter: Litter = {
     fatherId: o.id[m] as number,
@@ -91,7 +129,13 @@ export function mate(sim: ParcelSim, i: number, j: number): void {
   sim.pendingLitters.set(o.id[f] as number, litter);
   o.flags[f] = (o.flags[f] as number) | Flag.Pregnant;
   const investment = o.pheno[pf + T.Investment] as number;
-  o.pregnantUntil[f] = tick + Math.round(cfg.reproduction.gestationBase * (1 + 0.8 * investment) * Math.pow((o.mass[f] as number) / 4, 0.25));
+  o.pregnantUntil[f] =
+    tick +
+    Math.round(
+      cfg.reproduction.gestationBase *
+        (1 + 0.8 * investment) *
+        Math.pow((o.mass[f] as number) / 4, 0.25),
+    );
   sim.stats.onMating(f);
 }
 
@@ -111,7 +155,10 @@ export function giveBirth(sim: ParcelSim, f: number): void {
   const birthMass = adultMass * frac;
   // Energy handed to each newborn plus the tissue it is made of.
   const fat = o.pheno[pf + T.FatReserves] as number;
-  const perChild = (birthMass * (cfg.organisms.reservePerMass + cfg.organisms.reserveFatBonus * fat) * 0.85 + birthMass * 0.35) * cfg.reproduction.costOverhead;
+  const perChild =
+    (birthMass * (cfg.organisms.reservePerMass + cfg.organisms.reserveFatBonus * fat) * 0.85 +
+      birthMass * 0.35) *
+    cfg.reproduction.costOverhead;
   const maxE = sim.der(f, D.MaxEnergy);
   const rng = sim.rngSpawn;
   let born = 0;
@@ -120,20 +167,31 @@ export function giveBirth(sim: ParcelSim, f: number): void {
     o.energy[f] = (o.energy[f] as number) - perChild;
     const x = Math.min(sim.width - 0.01, Math.max(0, (o.x[f] as number) + rng.range(-0.6, 0.6)));
     const y = Math.min(sim.height - 0.01, Math.max(0, (o.y[f] as number) + rng.range(-0.6, 0.6)));
-    const child = sim.spawn(litter.alleles, k * ALLELES_PER_GENOME, litter.delet[2 * k] as number, litter.delet[2 * k + 1] as number, litter.species, o.lineage[f] as number, x, y, {
-      adult: false,
-      generation: litter.generation,
-      motherId: id,
-      fatherId: litter.fatherId,
-      motherIdx: f,
-      birthMassFrac: frac,
-      macro: (litter.macro[k] as number) >= 0,
-    });
+    const child = sim.spawn(
+      litter.alleles,
+      k * ALLELES_PER_GENOME,
+      litter.delet[2 * k] as number,
+      litter.delet[2 * k + 1] as number,
+      litter.species,
+      o.lineage[f] as number,
+      x,
+      y,
+      {
+        adult: false,
+        generation: litter.generation,
+        motherId: id,
+        fatherId: litter.fatherId,
+        motherIdx: f,
+        birthMassFrac: frac,
+        macro: (litter.macro[k] as number) >= 0,
+      },
+    );
     // Newborn deleterious load lowers juvenile survival.
     const viab = o.derived[child * DERIVED_COUNT + D.Viability] as number;
     o.health[child] = viab;
     born++;
-    if ((litter.macro[k] as number) >= 0) sim.moments.macromutant(sim, child, litter.macro[k] as number);
+    if ((litter.macro[k] as number) >= 0)
+      sim.moments.macromutant(sim, child, litter.macro[k] as number);
   }
   o.cooldownUntil[f] = sim.tick + cfg.reproduction.cooldown;
   sim.stats.onLitter(f, born, litter.count);

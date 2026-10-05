@@ -26,10 +26,24 @@ export interface CapabilityDef {
 }
 
 export const CAPABILITIES: readonly CapabilityDef[] = [
-  { key: 'swim', bit: Cap.Swim, needs: [{ trait: T.Fins, min: 0.5 }, { trait: T.Elongation, min: 0.4 }] },
+  {
+    key: 'swim',
+    bit: Cap.Swim,
+    needs: [
+      { trait: T.Fins, min: 0.5 },
+      { trait: T.Elongation, min: 0.4 },
+    ],
+  },
   { key: 'climb', bit: Cap.Climb, needs: [{ trait: T.Prehensile, min: 0.55 }], maxMass: 9 },
   { key: 'glide', bit: Cap.Glide, needs: [{ trait: T.Membranes, min: 0.5 }], maxMass: 5 },
-  { key: 'dig', bit: Cap.Dig, needs: [{ trait: T.LegStrength, min: 0.62 }, { trait: T.Territoriality, min: 0.5 }] },
+  {
+    key: 'dig',
+    bit: Cap.Dig,
+    needs: [
+      { trait: T.LegStrength, min: 0.62 },
+      { trait: T.Territoriality, min: 0.5 },
+    ],
+  },
   {
     key: 'packHunt',
     bit: Cap.PackHunt,
@@ -40,13 +54,62 @@ export const CAPABILITIES: readonly CapabilityDef[] = [
       { trait: T.Carnivory, min: 0.5 },
     ],
   },
-  { key: 'herd', bit: Cap.Herd, needs: [{ trait: T.Sociability, min: 0.6 }, { trait: T.Carnivory, max: 0.4 }] },
-  { key: 'hibernate', bit: Cap.Hibernate, needs: [{ trait: T.FatReserves, min: 0.6 }, { trait: T.Metabolism, max: 0.42 }] },
-  { key: 'aposematic', bit: Cap.Aposematic, needs: [{ trait: T.ToxinProduction, min: 0.55 }, { trait: T.Conspicuous, min: 0.6 }] },
-  { key: 'camouflage', bit: Cap.Camouflage, needs: [{ trait: T.Conspicuous, max: 0.28 }, { trait: T.Fear, min: 0.5 }] },
-  { key: 'nocturnal', bit: Cap.Nocturnal, needs: [{ trait: T.EyeSize, min: 0.55 }, { trait: T.Nocturnality, min: 0.6 }] },
-  { key: 'store', bit: Cap.Store, needs: [{ trait: T.Brain, min: 0.55 }, { trait: T.Territoriality, min: 0.55 }] },
-  { key: 'migrate', bit: Cap.Migrate, needs: [{ trait: T.Curiosity, min: 0.55 }, { trait: T.Brain, min: 0.5 }] },
+  {
+    key: 'herd',
+    bit: Cap.Herd,
+    needs: [
+      { trait: T.Sociability, min: 0.6 },
+      { trait: T.Carnivory, max: 0.4 },
+    ],
+  },
+  {
+    key: 'hibernate',
+    bit: Cap.Hibernate,
+    needs: [
+      { trait: T.FatReserves, min: 0.6 },
+      { trait: T.Metabolism, max: 0.42 },
+    ],
+  },
+  {
+    key: 'aposematic',
+    bit: Cap.Aposematic,
+    needs: [
+      { trait: T.ToxinProduction, min: 0.55 },
+      { trait: T.Conspicuous, min: 0.6 },
+    ],
+  },
+  {
+    key: 'camouflage',
+    bit: Cap.Camouflage,
+    needs: [
+      { trait: T.Conspicuous, max: 0.28 },
+      { trait: T.Fear, min: 0.5 },
+    ],
+  },
+  {
+    key: 'nocturnal',
+    bit: Cap.Nocturnal,
+    needs: [
+      { trait: T.EyeSize, min: 0.55 },
+      { trait: T.Nocturnality, min: 0.6 },
+    ],
+  },
+  {
+    key: 'store',
+    bit: Cap.Store,
+    needs: [
+      { trait: T.Brain, min: 0.55 },
+      { trait: T.Territoriality, min: 0.55 },
+    ],
+  },
+  {
+    key: 'migrate',
+    bit: Cap.Migrate,
+    needs: [
+      { trait: T.Curiosity, min: 0.55 },
+      { trait: T.Brain, min: 0.5 },
+    ],
+  },
 ];
 
 export const CAPABILITY_COUNT = CAPABILITIES.length;

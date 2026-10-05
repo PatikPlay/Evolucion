@@ -4,6 +4,7 @@ import { CAPABILITIES, CAPABILITY_COUNT } from '../organisms/capabilities';
 import { TRAIT_COUNT } from '../genetics/traits';
 import { ALLELES_PER_GENOME, LOCI } from '../genetics/genome-map';
 import { DEATH_COUNT, FOOD_COUNT } from '../behavior/actions';
+import { popcount } from '../genetics/genome';
 
 /** Event counters accumulated between two samples. */
 export interface PeriodCounters {
@@ -48,10 +49,14 @@ export interface SpeciesSample {
   massSd: number;
   /** Mean per-locus allele variance (genetic diversity). */
   diversity: number;
+  /** Mean within-individual allele variance (observed heterozygosity; falls with inbreeding). */
+  heterozygosity: number;
   /** Mean number of homozygous deleterious loci. */
   deleteriousLoad: number;
   /** Fraction of individuals with at least one homozygous deleterious locus. */
   deleteriousAffected: number;
+  /** Fraction of deleterious allele copies carried in homozygous (expressed) state. */
+  deleteriousExpression: number;
   caps: number[];
   infected: number;
   cx: number;
@@ -144,7 +149,8 @@ export class StatsRecorder {
   }
 
   onLitter(f: number, born: number, conceived: number): void {
-    if (born < conceived) this.counter(this.sim.org.species[f] as number).littersLost += conceived - born;
+    if (born < conceived)
+      this.counter(this.sim.org.species[f] as number).littersLost += conceived - born;
   }
 
   onInfection(j: number, strain: number): void {
@@ -180,13 +186,15 @@ export class StatsRecorder {
       if (info && members.length > 0) {
         // Track capabilities that became common.
         for (let k = 0; k < CAPABILITY_COUNT; k++) {
-          if ((s.caps[k] as number) > 0.25 * members.length && members.length >= 8) info.capsCommon |= (CAPABILITIES[k] as { bit: number }).bit;
+          if ((s.caps[k] as number) > 0.25 * members.length && members.length >= 8)
+            info.capsCommon |= (CAPABILITIES[k] as { bit: number }).bit;
         }
       }
       if (info && members.length === 0 && info.extinctTick < 0) info.extinctTick = sim.tick;
     }
     this.counters = new Map();
-    if (this.maxSamples > 0 && this.samples.length > this.maxSamples) this.samples.splice(0, this.samples.length - this.maxSamples);
+    if (this.maxSamples > 0 && this.samples.length > this.maxSamples)
+      this.samples.splice(0, this.samples.length - this.maxSamples);
   }
 
   /** Samples of one species in tick order. */
@@ -195,13 +203,19 @@ export class StatsRecorder {
   }
 
   latest(species: number): SpeciesSample | undefined {
-    for (let k = this.samples.length - 1; k >= 0; k--) if (this.samples[k]?.species === species) return this.samples[k];
+    for (let k = this.samples.length - 1; k >= 0; k--)
+      if (this.samples[k]?.species === species) return this.samples[k];
     return undefined;
   }
 }
 
 /** Census of an explicit set of organisms (also used directly by experiments). */
-export function censusOf(sim: ParcelSim, members: readonly number[], species: number, lineage: number): SpeciesSample {
+export function censusOf(
+  sim: ParcelSim,
+  members: readonly number[],
+  species: number,
+  lineage: number,
+): SpeciesSample {
   const o = sim.org;
   const n = members.length;
   const traitMean = new Float32Array(TRAIT_COUNT);
@@ -220,6 +234,7 @@ export function censusOf(sim: ParcelSim, members: readonly number[], species: nu
   let biomass = 0;
   let load = 0;
   let affected = 0;
+  let delCopies = 0;
   let infected = 0;
   let cx = 0;
   let cy = 0;
@@ -247,13 +262,15 @@ export function censusOf(sim: ParcelSim, members: readonly number[], species: nu
     }
     const dl = o.delLoad[i] as number;
     load += dl;
+    delCopies += popcount(o.delet[2 * i] as number) + popcount(o.delet[2 * i + 1] as number);
     if (dl > 0) affected++;
     if (o.infection[i]) infected++;
     cx += o.x[i] as number;
     cy += o.y[i] as number;
     gen += o.generation[i] as number;
     const bits = o.capabilities[i] as number;
-    for (let k = 0; k < CAPABILITY_COUNT; k++) if (bits & (CAPABILITIES[k] as { bit: number }).bit) caps[k]!++;
+    for (let k = 0; k < CAPABILITY_COUNT; k++)
+      if (bits & (CAPABILITIES[k] as { bit: number }).bit) caps[k]!++;
   }
   const juveniles = n - adults;
   for (let t = 0; t < TRAIT_COUNT; t++) {
@@ -286,8 +303,10 @@ export function censusOf(sim: ParcelSim, members: readonly number[], species: nu
     massMean,
     massSd: adults > 1 ? Math.sqrt(Math.max(0, mass2 / adults - massMean * massMean)) : 0,
     diversity: alleleDiversity(o.alleles, members),
+    heterozygosity: observedHeterozygosity(o.alleles, members),
     deleteriousLoad: n > 0 ? load / n : 0,
     deleteriousAffected: n > 0 ? affected / n : 0,
+    deleteriousExpression: delCopies > 0 ? (2 * load) / delCopies : 0,
     caps,
     infected,
     cx,
@@ -296,6 +315,21 @@ export function censusOf(sim: ParcelSim, members: readonly number[], species: nu
     generationMean: n > 0 ? gen / n : 0,
     period: emptyCounters(),
   };
+}
+
+/** Mean over individuals and (non-recognition) loci of (a1 − a2)² / 4: within-individual allele variance. */
+export function observedHeterozygosity(alleles: Float32Array, members: readonly number[]): number {
+  if (members.length === 0) return 0;
+  let total = 0;
+  for (const i of members) {
+    for (const l of NON_RECOGNITION) {
+      const d =
+        (alleles[i * ALLELES_PER_GENOME + 2 * l] as number) -
+        (alleles[i * ALLELES_PER_GENOME + 2 * l + 1] as number);
+      total += (d * d) / 4;
+    }
+  }
+  return total / (members.length * NON_RECOGNITION.length);
 }
 
 /** Mean over (non-recognition) loci of the variance of allele values in the group. */
@@ -317,4 +351,3 @@ export function alleleDiversity(alleles: Float32Array, members: readonly number[
   }
   return total / NON_RECOGNITION.length;
 }
-

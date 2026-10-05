@@ -39,7 +39,8 @@ export class Fauna {
     this.cellsPerBlock = this.blockSize * this.blockSize;
     this.recountWater();
     for (let b = 0; b < nb; b++) {
-      for (let k = 0; k < FAUNA_KINDS; k++) (this.density[k] as Float32Array)[b] = this.capacityOf(k, b) * 0.7;
+      for (let k = 0; k < FAUNA_KINDS; k++)
+        (this.density[k] as Float32Array)[b] = this.capacityOf(k, b) * 0.7;
     }
   }
 
@@ -82,9 +83,13 @@ export class Fauna {
 
   capacityOf(kind: number, b: number): number {
     const f = this.cfg.fauna;
-    if (kind === FaunaKind.Fish) return (this.waterCells[b] as number) * f.fishCapacityPerWaterCell * (this.boost[2] as number);
+    if (kind === FaunaKind.Fish)
+      return (
+        (this.waterCells[b] as number) * f.fishCapacityPerWaterCell * (this.boost[2] as number)
+      );
     const [grass, shrub] = this.plantSums(b);
-    if (kind === FaunaKind.Insects) return (grass + shrub) * f.insectCapacityPerPlant * (this.boost[0] as number);
+    if (kind === FaunaKind.Insects)
+      return (grass + shrub) * f.insectCapacityPerPlant * (this.boost[0] as number);
     return grass * f.smallHerbCapacityPerGrass * (this.boost[1] as number);
   }
 

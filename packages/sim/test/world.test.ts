@@ -24,18 +24,24 @@ describe('world generation', () => {
       expect(water / w.terrain.size).toBeGreaterThan(0.05);
       expect(water / w.terrain.size).toBeLessThan(0.25);
       // At least four land biomes present.
-      const land = [Biome.Grassland, Biome.Forest, Biome.Shrubland, Biome.Sand, Biome.Rock].filter((b) => counts[b]! > 20);
+      const land = [Biome.Grassland, Biome.Forest, Biome.Shrubland, Biome.Sand, Biome.Rock].filter(
+        (b) => counts[b]! > 20,
+      );
       expect(land.length).toBeGreaterThanOrEqual(4);
       // No land cell is unreasonably far from water.
       let far = 0;
-      for (let i = 0; i < w.terrain.size; i++) if ((w.access.waterDistance[i] as number) > 45) far++;
+      for (let i = 0; i < w.terrain.size; i++)
+        if ((w.access.waterDistance[i] as number) > 45) far++;
       expect(far / w.terrain.size).toBeLessThan(0.05);
     }
   });
 
   it('gives every parcel the same ecological capacity within ±10%', () => {
     const values: number[] = [];
-    for (let s = 0; s < 12; s++) values.push(createWorld(new Rng(`cap-${s}`), DEFAULT_SIM_CONFIG).vegetation.productivityEstimate());
+    for (let s = 0; s < 12; s++)
+      values.push(
+        createWorld(new Rng(`cap-${s}`), DEFAULT_SIM_CONFIG).vegetation.productivityEstimate(),
+      );
     const target = DEFAULT_SIM_CONFIG.world.targetProductivityPerCell * 96 * 96;
     for (const v of values) expect(Math.abs(v / target - 1)).toBeLessThan(0.1);
   });

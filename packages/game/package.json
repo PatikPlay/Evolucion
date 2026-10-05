@@ -9,5 +9,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": {"@linaje/sim": "workspace:*", "@linaje/protocol": "workspace:*"}
+  "dependencies": {
+    "@linaje/sim": "workspace:*",
+    "@linaje/protocol": "workspace:*"
+  }
 }

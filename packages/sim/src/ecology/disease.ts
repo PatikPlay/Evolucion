@@ -47,9 +47,10 @@ export const ENDEMIC_STRAIN: Omit<Strain, 'id'> = {
 };
 
 /** Strain archetypes used by events and actions. */
-export const STRAIN_ARCHETYPES: Readonly<Record<string, Omit<Strain, 'id' | 'key' | 'endemicTo'>>> = {
-  fever: { resistance: T.ImmunityB, transmissibility: 0.18, virulence: 0.01, duration: 50 },
-  wasting: { resistance: T.ImmunityC, transmissibility: 0.1, virulence: 0.006, duration: 120 },
-  plague: { resistance: T.ImmunityD, transmissibility: 0.25, virulence: 0.016, duration: 40 },
-  mild: { resistance: T.ImmunityB, transmissibility: 0.2, virulence: 0.002, duration: 40 },
-};
+export const STRAIN_ARCHETYPES: Readonly<Record<string, Omit<Strain, 'id' | 'key' | 'endemicTo'>>> =
+  {
+    fever: { resistance: T.ImmunityB, transmissibility: 0.18, virulence: 0.01, duration: 50 },
+    wasting: { resistance: T.ImmunityC, transmissibility: 0.1, virulence: 0.006, duration: 120 },
+    plague: { resistance: T.ImmunityD, transmissibility: 0.25, virulence: 0.016, duration: 40 },
+    mild: { resistance: T.ImmunityB, transmissibility: 0.2, virulence: 0.002, duration: 40 },
+  };

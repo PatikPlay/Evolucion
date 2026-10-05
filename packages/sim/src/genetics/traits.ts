@@ -129,7 +129,9 @@ export const TRAITS: readonly TraitInfo[] = [
   { key: 'prefSize', group: 'reproduction', visible: false },
 ];
 
-export const TRAIT_INDEX: Readonly<Record<string, number>> = Object.fromEntries(TRAITS.map((t, i) => [t.key, i]));
+export const TRAIT_INDEX: Readonly<Record<string, number>> = Object.fromEntries(
+  TRAITS.map((t, i) => [t.key, i]),
+);
 
 export const MIN_MASS = 0.4;
 export const MAX_MASS = 40;

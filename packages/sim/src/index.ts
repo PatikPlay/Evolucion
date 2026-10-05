@@ -21,3 +21,4 @@ export * from './behavior/customs';
 export * from './ecology/disease';
 export * from './stats/stats';
 export * from './stats/moments';
+export * from './genetics/founders';

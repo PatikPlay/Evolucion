@@ -78,7 +78,19 @@ export const enum Death {
   Culled,
 }
 
-export const DEATH_CAUSES = ['starvation', 'thirst', 'predation', 'cold', 'heat', 'disease', 'oldAge', 'combat', 'drowning', 'toxin', 'culled'] as const;
+export const DEATH_CAUSES = [
+  'starvation',
+  'thirst',
+  'predation',
+  'cold',
+  'heat',
+  'disease',
+  'oldAge',
+  'combat',
+  'drowning',
+  'toxin',
+  'culled',
+] as const;
 export const DEATH_COUNT = 11;
 
 /** Food categories, for digestion and diet statistics. */
@@ -94,4 +106,14 @@ export const enum Food {
   Fish,
 }
 export const FOOD_COUNT = 9;
-export const FOOD_KEYS = ['grass', 'browse', 'fruit', 'canopy', 'algae', 'meat', 'insects', 'smallPrey', 'fish'] as const;
+export const FOOD_KEYS = [
+  'grass',
+  'browse',
+  'fruit',
+  'canopy',
+  'algae',
+  'meat',
+  'insects',
+  'smallPrey',
+  'fish',
+] as const;

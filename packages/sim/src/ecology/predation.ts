@@ -15,7 +15,8 @@ function packBonus(sim: ParcelSim, i: number, j: number): number {
   let allies = 0;
   for (let k = 0; k < n; k++) {
     const h = NEAR[k] as number;
-    if (o.species[h] === o.species[i] && o.action[h] === Act.Hunt && o.targetId[h] === o.id[j]) allies++;
+    if (o.species[h] === o.species[i] && o.action[h] === Act.Hunt && o.targetId[h] === o.id[j])
+      allies++;
   }
   if (allies === 0) return 1;
   const pack = (o.capabilities[i] as number) & Cap.PackHunt;
@@ -34,7 +35,13 @@ function herdBonus(sim: ParcelSim, j: number): number {
 }
 
 /** Learned aversion: eating something toxic teaches a predator to avoid prey that looks like it. */
-export function poison(sim: ParcelSim, i: number, toxin: number, hue: number, amount: number): void {
+export function poison(
+  sim: ParcelSim,
+  i: number,
+  toxin: number,
+  hue: number,
+  amount: number,
+): void {
   const o = sim.org;
   const cfg = sim.cfg.predation;
   const res = o.pheno[i * TRAIT_COUNT + T.ToxinResistance] as number;
@@ -52,23 +59,31 @@ export function attack(sim: ParcelSim, i: number, j: number): void {
   const o = sim.org;
   const cfg = sim.cfg.predation;
   const rng = sim.rngEcology;
-  // One strike every couple of ticks.
-  if (rng.float() < 0.5) return;
   const pw = power(sim, i) * packBonus(sim, i, j);
   const rs = resistance(sim, j) * herdBonus(sim, j);
   const ratio = pw / (pw + rs);
+  // Once caught, prey of similar strength rarely gets away; armour, spines and
+  // size are what make a catch fail.
+  const pKill = cfg.killBase * Math.sqrt(ratio);
   const pj = j * TRAIT_COUNT;
   // Biting a toxic animal hurts even if it escapes.
   const tox = o.pheno[pj + T.ToxinProduction] as number;
   poison(sim, i, tox, o.pheno[pj + T.Hue] as number, 0.5);
-  if (rng.float() < cfg.killBase * ratio) {
+  if (rng.float() < pKill) {
     const mass = o.mass[j] as number;
     const x = o.x[j] as number;
     const y = o.y[j] as number;
     const hue = o.pheno[pj + T.Hue] as number;
     sim.stats.onKill(i, j);
     sim.kill(j, Death.Predation, false);
-    const c = sim.world.carcasses.add(x, y, mass * cfg.meatPerMass, tox, o.lineage[j] as number, hue);
+    const c = sim.world.carcasses.add(
+      x,
+      y,
+      mass * cfg.meatPerMass,
+      tox,
+      o.lineage[j] as number,
+      hue,
+    );
     if (c >= 0) {
       o.action[i] = Act.Scavenge;
       o.tx[i] = x;
@@ -78,7 +93,8 @@ export function attack(sim: ParcelSim, i: number, j: number): void {
   } else {
     o.health[j] = (o.health[j] as number) - 0.22 * ratio;
     o.dmgCause[j] = Death.Predation;
-    o.health[i] = (o.health[i] as number) - (0.03 + 0.12 * (o.pheno[pj + T.Spines] as number) * (1 - ratio));
+    o.health[i] =
+      (o.health[i] as number) - (0.03 + 0.12 * (o.pheno[pj + T.Spines] as number) * (1 - ratio));
     o.dmgCause[i] = Death.Combat;
     o.fatigue[i] = Math.min(1, (o.fatigue[i] as number) + 0.12);
     o.nextThink[j] = sim.tick;
@@ -99,7 +115,7 @@ export function eatCarcass(sim: ParcelSim, i: number, c: number): void {
   o.lastFood[i] = Food.Meat;
   sim.stats.onEat(i, Food.Meat, gain);
   const tox = carc.toxin[c] as number;
-  if (tox > 0.05) poison(sim, i, tox, carc.hue[c] as number, got / Math.max(0.1, bite) * 0.15);
+  if (tox > 0.05) poison(sim, i, tox, carc.hue[c] as number, (got / Math.max(0.1, bite)) * 0.15);
 }
 
 /** Territorial contest between `i` and `j`; the loser flees. */
@@ -114,7 +130,9 @@ export function fight(sim: ParcelSim, i: number, j: number): void {
   const pl = Math.min(pi, pj);
   o.health[loser] = (o.health[loser] as number) - (0.04 + 0.14 * (pw / (pw + pl)));
   o.dmgCause[loser] = Death.Combat;
-  o.health[winner] = (o.health[winner] as number) - (0.02 + 0.08 * (o.pheno[loser * TRAIT_COUNT + T.Spines] as number));
+  o.health[winner] =
+    (o.health[winner] as number) -
+    (0.02 + 0.08 * (o.pheno[loser * TRAIT_COUNT + T.Spines] as number));
   o.dmgCause[winner] = Death.Combat;
   o.fatigue[winner] = Math.min(1, (o.fatigue[winner] as number) + 0.1);
   o.action[loser] = Act.Flee;

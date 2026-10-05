@@ -98,7 +98,11 @@ LOCI.forEach((l, i) => {
  * Pleiotropic, cryptic and recognition loci get random means (species identity),
  * then dedicated loci absorb the residual (Gauss–Seidel over a few sweeps).
  */
-export function solveAlleleMeans(tpl: SpeciesTemplate, rng: Rng, canalisation: number): Float32Array {
+export function solveAlleleMeans(
+  tpl: SpeciesTemplate,
+  rng: Rng,
+  canalisation: number,
+): Float32Array {
   const targets = templateTargets(tpl);
   const mean = new Float32Array(ALLELES_PER_GENOME);
   LOCI.forEach((l, i) => {
@@ -137,19 +141,31 @@ export interface FounderGenomes {
 }
 
 /** Samples `count` founder genomes around the template's allele means. */
-export function sampleFounders(tpl: SpeciesTemplate, count: number, rng: Rng, canalisation: number, standingVariation: number): FounderGenomes {
+export function sampleFounders(
+  tpl: SpeciesTemplate,
+  count: number,
+  rng: Rng,
+  canalisation: number,
+  standingVariation: number,
+): FounderGenomes {
   const means = solveAlleleMeans(tpl, rng.fork('means'), canalisation);
   return sampleAround(means, count, rng.fork('individuals'), tpl.variation ?? standingVariation);
 }
 
-export function sampleAround(means: Float32Array, count: number, rng: Rng, sd: number): FounderGenomes {
+export function sampleAround(
+  means: Float32Array,
+  count: number,
+  rng: Rng,
+  sd: number,
+): FounderGenomes {
   const alleles = new Float32Array(count * ALLELES_PER_GENOME);
   const delet = new Uint32Array(count * 2);
   // Per-locus deleterious allele frequency (low: harmless in large populations).
   const freqs: number[] = [];
   for (let k = 0; k < DELETERIOUS_LOCI; k++) freqs.push(0.03 + rng.float() * 0.06);
   for (let n = 0; n < count; n++) {
-    for (let a = 0; a < ALLELES_PER_GENOME; a++) alleles[n * ALLELES_PER_GENOME + a] = (means[a] as number) + rng.gaussian(0, sd);
+    for (let a = 0; a < ALLELES_PER_GENOME; a++)
+      alleles[n * ALLELES_PER_GENOME + a] = (means[a] as number) + rng.gaussian(0, sd);
     for (let h = 0; h < 2; h++) {
       let mask = 0;
       for (let k = 0; k < DELETERIOUS_LOCI; k++) if (rng.chance(freqs[k] as number)) mask |= 1 << k;

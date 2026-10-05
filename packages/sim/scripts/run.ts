@@ -3,7 +3,15 @@
  * Prints a yearly census of every species and the final state hash.
  */
 import { parseArgs } from 'node:util';
-import { DEATH_CAUSES, FOOD_KEYS, ParcelSim, TICKS_PER_YEAR, hashToHex, T, NPC_LINEAGE_BASE } from '../src/index';
+import {
+  DEATH_CAUSES,
+  FOOD_KEYS,
+  ParcelSim,
+  TICKS_PER_YEAR,
+  hashToHex,
+  T,
+  NPC_LINEAGE_BASE,
+} from '../src/index';
 import { PREDATOR_TEMPLATE } from '../src/genetics/archetypes';
 
 const { values } = parseArgs({
@@ -23,13 +31,17 @@ const sp = sim.spawnFounders({ key: 'base', traits: {} }, Number(values.founders
 const t0 = process.hrtime.bigint();
 for (let y = 0; y < years; y++) {
   if (y === Number(values.predatorYear) && Number(values.predators) > 0) {
-    sim.spawnFounders(PREDATOR_TEMPLATE, Number(values.predators), NPC_LINEAGE_BASE, { archetype: 'predator' });
+    sim.spawnFounders(PREDATOR_TEMPLATE, Number(values.predators), NPC_LINEAGE_BASE, {
+      archetype: 'predator',
+    });
   }
   sim.run(TICKS_PER_YEAR);
   if (values.quiet) continue;
   const lines: string[] = [];
   for (const info of sim.species.list) {
-    const recent = sim.stats.samples.filter((s) => s.species === info.id && s.tick > sim.tick - TICKS_PER_YEAR);
+    const recent = sim.stats.samples.filter(
+      (s) => s.species === info.id && s.tick > sim.tick - TICKS_PER_YEAR,
+    );
     const last = recent[recent.length - 1];
     if (!last) continue;
     const deaths = new Array<number>(DEATH_CAUSES.length).fill(0);
@@ -40,9 +52,15 @@ for (let y = 0; y < years; y++) {
       s.period.diet.forEach((d, k) => (diet[k]! += d));
       births += s.period.births;
     }
-    const dtxt = deaths.map((d, k) => (d ? `${DEATH_CAUSES[k]}:${d}` : '')).filter(Boolean).join(' ');
+    const dtxt = deaths
+      .map((d, k) => (d ? `${DEATH_CAUSES[k]}:${d}` : ''))
+      .filter(Boolean)
+      .join(' ');
     const total = diet.reduce((a, b) => a + b, 0) || 1;
-    const ftxt = diet.map((d, k) => (d / total > 0.05 ? `${FOOD_KEYS[k]}:${Math.round((100 * d) / total)}%` : '')).filter(Boolean).join(' ');
+    const ftxt = diet
+      .map((d, k) => (d / total > 0.05 ? `${FOOD_KEYS[k]}:${Math.round((100 * d) / total)}%` : ''))
+      .filter(Boolean)
+      .join(' ');
     lines.push(
       `  sp${info.id} n=${last.count} ad=${last.adults} gen=${last.generationMean.toFixed(1)} mass=${last.massMean.toFixed(2)} speed=${last.speedMean.toFixed(3)} legs=${last.traitMean[T.LegLength]!.toFixed(2)} massT=${last.traitMean[T.Mass]!.toFixed(2)} litT=${last.traitMean[T.LitterSize]!.toFixed(2)} grT=${last.traitMean[T.Growth]!.toFixed(2)} cold=${last.traitMean[T.ColdTolerance]!.toFixed(2)} div=${last.diversity.toFixed(3)} inf=${last.infected} births=${births} | ${dtxt} | ${ftxt}`,
     );
@@ -50,4 +68,6 @@ for (let y = 0; y < years; y++) {
   console.log(`year ${y + 1} tick=${sim.tick} live=${sim.org.liveCount}\n${lines.join('\n')}`);
 }
 const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-console.log(`seed=${values.seed} years=${years} hash=${hashToHex(sim.stateHash())} time=${(ms / 1000).toFixed(1)}s species=${sp}`);
+console.log(
+  `seed=${values.seed} years=${years} hash=${hashToHex(sim.stateHash())} time=${(ms / 1000).toFixed(1)}s species=${sp}`,
+);

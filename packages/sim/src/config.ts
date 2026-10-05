@@ -95,6 +95,8 @@ export const DEFAULT_SIM_CONFIG = {
     /** Base perception radius in cells. */
     basePerception: 6,
     maxNeighbors: 12,
+    /** Strength of interference competition: bite lost per unit of heavier neighbours' excess mass. */
+    interference: 0.5,
     /** Young adults settle away from their birthplace. */
     natalDispersal: 1,
   },
@@ -127,7 +129,7 @@ export const DEFAULT_SIM_CONFIG = {
     /** Cryptic loci contribute this fraction of their effect under normal (canalised) conditions. */
     canalisation: 0.15,
     /** Standing variation (allele sd) in founder populations. */
-    standingVariation: 0.35,
+    standingVariation: 0.4,
     /** Viability lost per homozygous deleterious locus. */
     deleteriousPenalty: 0.14,
   },
@@ -136,9 +138,14 @@ export const DEFAULT_SIM_CONFIG = {
     /** Base chance multiplier of a successful kill once in reach. */
     killBase: 0.75,
     /** Meat (fu) per unit of prey mass. */
-    meatPerMass: 1.6,
+    meatPerMass: 3.2,
     carcassDecay: 0.006,
     giveUpDistanceFactor: 1.6,
+    /** Hunters creep up at this fraction of top speed, then sprint within `sprintDistance`. */
+    stalkFraction: 0.3,
+    sprintDistance: 3,
+    /** Extra sprint distance (cells) per cell/tick of speed advantage over the prey. */
+    coursing: 120,
     /** Toxin dose above which an attacker is harmed. */
     toxinThreshold: 0.15,
     toxinDamage: 0.9,
@@ -188,7 +195,10 @@ export function mergeConfig(overrides?: DeepPartial<SimConfig>): SimConfig {
   return deepMerge(structuredClone(DEFAULT_SIM_CONFIG), overrides ?? {}) as SimConfig;
 }
 
-function deepMerge(target: Record<string, unknown>, src: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  target: Record<string, unknown>,
+  src: Record<string, unknown>,
+): Record<string, unknown> {
   for (const key of Object.keys(src)) {
     const v = src[key];
     if (v === undefined) continue;

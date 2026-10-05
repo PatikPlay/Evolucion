@@ -11,7 +11,6 @@ export const enum Plant {
 }
 export const PLANT_TYPES = 4;
 
-
 /**
  * Per-cell plant biomass with logistic growth. Fruit is a separate seasonal
  * pool produced by shrubs and trees.
@@ -34,9 +33,24 @@ export class Vegetation {
     private readonly cfg: SimConfig,
   ) {
     const n = terrain.size;
-    this.biomass = [new Float32Array(n), new Float32Array(n), new Float32Array(n), new Float32Array(n)];
-    this.capacity = [new Float32Array(n), new Float32Array(n), new Float32Array(n), new Float32Array(n)];
-    this.sown = [new Float32Array(n), new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+    this.biomass = [
+      new Float32Array(n),
+      new Float32Array(n),
+      new Float32Array(n),
+      new Float32Array(n),
+    ];
+    this.capacity = [
+      new Float32Array(n),
+      new Float32Array(n),
+      new Float32Array(n),
+      new Float32Array(n),
+    ];
+    this.sown = [
+      new Float32Array(n),
+      new Float32Array(n),
+      new Float32Array(n),
+      new Float32Array(n),
+    ];
     this.fruit = new Float32Array(n);
     this.thorny = new Uint8Array(n);
     const v = cfg.vegetation;
@@ -62,7 +76,12 @@ export class Vegetation {
     const fert = t.fertility[i] as number;
     for (let p = 0; p < PLANT_TYPES; p++) {
       const water = p === Plant.Algae;
-      const k = (this.baseK[p] as number) * (mult[p] as number) * fert * (water ? 1 : moist) * (1 + ((this.sown[p] as Float32Array)[i] as number));
+      const k =
+        (this.baseK[p] as number) *
+        (mult[p] as number) *
+        fert *
+        (water ? 1 : moist) *
+        (1 + ((this.sown[p] as Float32Array)[i] as number));
       (this.capacity[p] as Float32Array)[i] = k;
     }
   }
@@ -110,7 +129,10 @@ export class Vegetation {
       const temp = (t.baseTemp[i] as number) + offset;
       let gT = 0;
       if (temp > v.growMinTemp && temp < v.growMaxTemp) {
-        gT = temp < v.growOptTemp ? (temp - v.growMinTemp) / (v.growOptTemp - v.growMinTemp) : 1 - (temp - v.growOptTemp) / (v.growMaxTemp - v.growOptTemp);
+        gT =
+          temp < v.growOptTemp
+            ? (temp - v.growMinTemp) / (v.growOptTemp - v.growMinTemp)
+            : 1 - (temp - v.growOptTemp) / (v.growMaxTemp - v.growOptTemp);
         gT = Math.max(0, Math.min(1, gT * 1.3));
       }
       const moist = Math.min(1.2, (t.moisture[i] as number) * climate.moistureNow);
@@ -137,7 +159,11 @@ export class Vegetation {
       }
       let f = this.fruit[i] as number;
       if (fruiting) {
-        f += v.fruitRate * ((this.biomass[1] as Float32Array)[i]! + 0.5 * (this.biomass[2] as Float32Array)[i]!) * stride * g;
+        f +=
+          v.fruitRate *
+          ((this.biomass[1] as Float32Array)[i]! + 0.5 * (this.biomass[2] as Float32Array)[i]!) *
+          stride *
+          g;
       }
       f -= v.fruitDecay * f * stride;
       this.fruit[i] = f > v.fruitMax ? v.fruitMax : f < 0 ? 0 : f;

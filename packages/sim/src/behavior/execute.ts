@@ -7,7 +7,7 @@ import { Barrier, Biome, BIOME_MOVE } from '../world/terrain';
 import { eatPlantAt, faunaRate, plantRateAt } from '../ecology/feeding';
 import { attack, eatCarcass, fight } from '../ecology/predation';
 import { mate } from '../ecology/reproduction';
-import { coverAt } from './think';
+import { coverAt, detectability } from './think';
 
 const TURNS = [0, 0.7, -0.7, 1.4, -1.4, 2.1, -2.1];
 
@@ -16,7 +16,8 @@ export function passable(sim: ParcelSim, i: number, c: number, from: number): bo
   const t = sim.world.terrain;
   const caps = sim.org.capabilities[i] as number;
   const b = t.biome[c] as number;
-  if (b === Biome.DeepWater && !(caps & Cap.Swim) && t.biome[from] !== Biome.DeepWater) return false;
+  if (b === Biome.DeepWater && !(caps & Cap.Swim) && t.biome[from] !== Biome.DeepWater)
+    return false;
   const bar = t.barrier[c] as number;
   if (bar && bar !== t.barrier[from]) {
     if (bar === Barrier.Hedge && !(caps & (Cap.Glide | Cap.Climb))) return false;
@@ -30,8 +31,15 @@ export function passable(sim: ParcelSim, i: number, c: number, from: number): bo
 export function currentMaxSpeed(sim: ParcelSim, i: number): number {
   const o = sim.org;
   const q = i * DERIVED_COUNT;
-  const growth = Math.min(1, (o.mass[i] as number) / (o.derived[q + D.AdultMassPotential] as number));
-  return (o.derived[q + D.MaxSpeed] as number) * (0.55 + 0.45 * growth) * (0.5 + 0.5 * Math.max(0, o.health[i] as number));
+  const growth = Math.min(
+    1,
+    (o.mass[i] as number) / (o.derived[q + D.AdultMassPotential] as number),
+  );
+  return (
+    (o.derived[q + D.MaxSpeed] as number) *
+    (0.55 + 0.45 * growth) *
+    (0.85 + 0.15 * Math.max(0, o.health[i] as number))
+  );
 }
 
 /**
@@ -77,9 +85,12 @@ export function moveTo(sim: ParcelSim, i: number, tx: number, ty: number, frac: 
     o.heading[i] = a;
     o.speed[i] = step;
     const nb = t.biome[c] as number;
-    let flags = (o.flags[i] as number) & ~(Flag.Swimming | Flag.Climbing | Flag.Gliding | Flag.Hidden | Flag.Burrowed);
+    let flags =
+      (o.flags[i] as number) &
+      ~(Flag.Swimming | Flag.Climbing | Flag.Gliding | Flag.Hidden | Flag.Burrowed);
     if (nb === Biome.ShallowWater || nb === Biome.DeepWater) flags |= Flag.Swimming;
-    if (caps & Cap.Glide && f > 0.8 && (b === Biome.Forest || b === Biome.Rock)) flags |= Flag.Gliding;
+    if (caps & Cap.Glide && f > 0.8 && (b === Biome.Forest || b === Biome.Rock))
+      flags |= Flag.Gliding;
     o.flags[i] = flags;
     return dist - step;
   }
@@ -114,8 +125,14 @@ export function execute(sim: ParcelSim, i: number): void {
     case Act.Graze: {
       // Grazers nibble on the way if there is anything worth eating.
       const here = t.index(o.x[i] as number, o.y[i] as number);
-      const rem0 = Math.hypot((o.tx[i] as number) - (o.x[i] as number), (o.ty[i] as number) - (o.y[i] as number));
-      if (rem0 >= 0.6 && plantRateAt(sim, i, here) > cfg.organisms.basalCoeff * sim.der(i, D.M075)) {
+      const rem0 = Math.hypot(
+        (o.tx[i] as number) - (o.x[i] as number),
+        (o.ty[i] as number) - (o.y[i] as number),
+      );
+      if (
+        rem0 >= 0.6 &&
+        plantRateAt(sim, i, here) > cfg.organisms.basalCoeff * sim.der(i, D.M075)
+      ) {
         gainEnergy(sim, i, eatPlantAt(sim, i, here));
         moveTo(sim, i, o.tx[i] as number, o.ty[i] as number, walk * 0.4);
         break;
@@ -171,15 +188,44 @@ export function execute(sim: ParcelSim, i: number): void {
         rethink(sim, i);
         break;
       }
-      const d = Math.hypot((o.x[j] as number) - (o.x[i] as number), (o.y[j] as number) - (o.y[i] as number));
-      if (d > sim.der(i, D.Perception) * cfg.predation.giveUpDistanceFactor || (o.fatigue[i] as number) > 0.97) {
+      const d = Math.hypot(
+        (o.x[j] as number) - (o.x[i] as number),
+        (o.y[j] as number) - (o.y[i] as number),
+      );
+      if (
+        d > sim.der(i, D.Perception) * cfg.predation.giveUpDistanceFactor ||
+        (o.fatigue[i] as number) > 0.97
+      ) {
         rethink(sim, i);
         break;
       }
-      // Stalk at walking pace while far; sprint when close.
-      moveTo(sim, i, o.x[j] as number, o.y[j] as number, d > 5 ? walk : 1);
-      const reach = cfg.predation.reach * (1 + 0.15 * Math.log2(Math.max(0.25, (o.mass[i] as number) / 4)));
-      const d2 = Math.hypot((o.x[j] as number) - (o.x[i] as number), (o.y[j] as number) - (o.y[i] as number));
+      // Stalk slowly (hard to notice) while far; sprint from close range.
+      // Hunters clearly faster than their prey run it down from farther away.
+      const advantage = currentMaxSpeed(sim, i) - currentMaxSpeed(sim, j);
+      const sprinting =
+        d <= cfg.predation.sprintDistance + Math.max(0, advantage) * cfg.predation.coursing;
+      moveTo(
+        sim,
+        i,
+        o.x[j] as number,
+        o.y[j] as number,
+        sprinting ? 1 : cfg.predation.stalkFraction,
+      );
+      // A charging hunter is hard to miss: the prey bolts at once if it notices.
+      if (
+        sprinting &&
+        o.action[j] !== Act.Flee &&
+        sim.isAdult(j) &&
+        d < sim.der(j, D.Perception) * detectability(sim, i)
+      ) {
+        o.nextThink[j] = sim.tick;
+      }
+      const reach =
+        cfg.predation.reach * (1 + 0.15 * Math.log2(Math.max(0.25, (o.mass[i] as number) / 4)));
+      const d2 = Math.hypot(
+        (o.x[j] as number) - (o.x[i] as number),
+        (o.y[j] as number) - (o.y[i] as number),
+      );
       if (d2 < reach) attack(sim, i, j);
       break;
     }
@@ -187,8 +233,14 @@ export function execute(sim: ParcelSim, i: number): void {
       // Wander slowly through the block while catching small fauna.
       const rem = moveTo(sim, i, o.tx[i] as number, o.ty[i] as number, walk * 0.6);
       if (rem < 0.3) {
-        o.tx[i] = Math.min(sim.width - 0.01, Math.max(0, (o.x[i] as number) + sim.rngBehavior.range(-2, 2)));
-        o.ty[i] = Math.min(sim.height - 0.01, Math.max(0, (o.y[i] as number) + sim.rngBehavior.range(-2, 2)));
+        o.tx[i] = Math.min(
+          sim.width - 0.01,
+          Math.max(0, (o.x[i] as number) + sim.rngBehavior.range(-2, 2)),
+        );
+        o.ty[i] = Math.min(
+          sim.height - 0.01,
+          Math.max(0, (o.y[i] as number) + sim.rngBehavior.range(-2, 2)),
+        );
       }
       const gain = faunaRate(sim, i, o.x[i] as number, o.y[i] as number, true);
       gainEnergy(sim, i, gain);
@@ -256,7 +308,13 @@ export function execute(sim: ParcelSim, i: number): void {
     }
     case Act.Hide:
     case Act.Hibernate: {
-      const rem = moveTo(sim, i, o.tx[i] as number, o.ty[i] as number, act === Act.Hide ? 0.9 : walk);
+      const rem = moveTo(
+        sim,
+        i,
+        o.tx[i] as number,
+        o.ty[i] as number,
+        act === Act.Hide ? 0.9 : walk,
+      );
       if (rem < 0.5) {
         stop(sim, i);
         settle(sim, i);
@@ -269,7 +327,11 @@ export function execute(sim: ParcelSim, i: number): void {
       if (rem < 0.6) {
         stop(sim, i);
         const c = t.index(o.x[i] as number, o.y[i] as number);
-        t.burrow[c] = Math.min(1, (t.burrow[c] as number) + 0.006 * (0.5 + (o.pheno[i * TRAIT_COUNT + T.LegStrength] as number)));
+        t.burrow[c] = Math.min(
+          1,
+          (t.burrow[c] as number) +
+            0.006 * (0.5 + (o.pheno[i * TRAIT_COUNT + T.LegStrength] as number)),
+        );
         o.energy[i] = (o.energy[i] as number) - cfg.organisms.basalCoeff * sim.der(i, D.M075) * 0.5;
         if ((t.burrow[c] as number) >= 1) rethink(sim, i);
         settle(sim, i);
@@ -280,10 +342,17 @@ export function execute(sim: ParcelSim, i: number): void {
       const rem = moveTo(sim, i, o.tx[i] as number, o.ty[i] as number, walk);
       if (rem < 0.6) {
         stop(sim, i);
-        const atHome = Math.hypot((o.x[i] as number) - (o.homeX[i] as number), (o.y[i] as number) - (o.homeY[i] as number)) < 1;
+        const atHome =
+          Math.hypot(
+            (o.x[i] as number) - (o.homeX[i] as number),
+            (o.y[i] as number) - (o.homeY[i] as number),
+          ) < 1;
         const maxE = sim.der(i, D.MaxEnergy);
         if (atHome && (o.cache[i] as number) > 0.5 && (o.energy[i] as number) < maxE * 0.8) {
-          const take = Math.min(o.cache[i] as number, cfg.organisms.biteCoeff * sim.der(i, D.M075) * 0.5);
+          const take = Math.min(
+            o.cache[i] as number,
+            cfg.organisms.biteCoeff * sim.der(i, D.M075) * 0.5,
+          );
           o.cache[i] = (o.cache[i] as number) - take;
           gainEnergy(sim, i, take);
           sim.stats.onEat(i, Food.Fruit, take);
@@ -299,7 +368,13 @@ export function execute(sim: ParcelSim, i: number): void {
     case Act.FollowGroup:
     case Act.Explore:
     case Act.Migrate: {
-      const rem = moveTo(sim, i, o.tx[i] as number, o.ty[i] as number, act === Act.Migrate ? walk * 1.4 : walk);
+      const rem = moveTo(
+        sim,
+        i,
+        o.tx[i] as number,
+        o.ty[i] as number,
+        act === Act.Migrate ? walk * 1.4 : walk,
+      );
       if (rem < 0.4) rethink(sim, i);
       break;
     }
@@ -341,4 +416,3 @@ export function gainEnergy(sim: ParcelSim, i: number, amount: number): void {
   const e = (o.energy[i] as number) + amount;
   o.energy[i] = e > maxE ? maxE : e;
 }
-

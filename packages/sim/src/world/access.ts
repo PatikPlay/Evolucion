@@ -54,14 +54,25 @@ export class TerrainAccess {
     const t = this.t;
     const src = new Uint8Array(t.size);
     for (let i = 0; i < t.size; i++) {
-      if ((BIOME_COVER[t.biome[i] as number] as number) >= 0.45 || t.refuge[i] || (t.burrow[i] as number) > 0.3) src[i] = 1;
+      if (
+        (BIOME_COVER[t.biome[i] as number] as number) >= 0.45 ||
+        t.refuge[i] ||
+        (t.burrow[i] as number) > 0.3
+      )
+        src[i] = 1;
     }
     nearestSource(src, t.width, t.height, this.nearestShelter, this.shelterDistance);
   }
 }
 
 /** Multi-source BFS storing, for every cell, the nearest source index and its distance. */
-export function nearestSource(src: Uint8Array, w: number, h: number, nearest: Int32Array, distance: Float32Array): void {
+export function nearestSource(
+  src: Uint8Array,
+  w: number,
+  h: number,
+  nearest: Int32Array,
+  distance: Float32Array,
+): void {
   const n = w * h;
   nearest.fill(-1);
   distance.fill(Infinity);

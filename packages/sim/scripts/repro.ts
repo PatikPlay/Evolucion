@@ -4,7 +4,10 @@ const sim = new ParcelSim({ seed: process.argv[2] ?? 's1' });
 sim.spawnFounders({ key: 'base', traits: {} }, 30, 0);
 for (let y = 0; y < Number(process.argv[3] ?? 4); y++) {
   const acts = new Map<number, number>();
-  let femEnergy = 0, fem = 0, receptiveF = 0, pregnant = 0;
+  let femEnergy = 0,
+    fem = 0,
+    receptiveF = 0,
+    pregnant = 0;
   for (let t = 0; t < TICKS_PER_YEAR; t++) {
     sim.step();
     if (t % 20 !== 0) continue;
@@ -23,8 +26,36 @@ for (let y = 0; y < Number(process.argv[3] ?? 4); y++) {
   const matings = recent.reduce((a, s) => a + s.period.matings, 0);
   const lost = recent.reduce((a, s) => a + s.period.littersLost, 0);
   const births = recent.reduce((a, s) => a + s.period.births, 0);
-  const names = ['rest','explore','graze','drink','flee','hunt','forage','scavenge','court','group','defend','care','hide','dig','store','migrate','sleep','hibernate','fight'];
+  const names = [
+    'rest',
+    'explore',
+    'graze',
+    'drink',
+    'flee',
+    'hunt',
+    'forage',
+    'scavenge',
+    'court',
+    'group',
+    'defend',
+    'care',
+    'hide',
+    'dig',
+    'store',
+    'migrate',
+    'sleep',
+    'hibernate',
+    'fight',
+  ];
   const total = [...acts.values()].reduce((a, b) => a + b, 0);
-  console.log(`year ${y + 1}: n=${sim.org.liveCount} matings=${matings} births=${births} lost=${lost} femE=${(femEnergy / fem).toFixed(2)} receptive=${(receptiveF / fem).toFixed(2)} pregnant=${(pregnant / fem).toFixed(2)}`);
-  console.log('   ' + [...acts.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${names[k]}:${Math.round((100 * v) / total)}%`).join(' '));
+  console.log(
+    `year ${y + 1}: n=${sim.org.liveCount} matings=${matings} births=${births} lost=${lost} femE=${(femEnergy / fem).toFixed(2)} receptive=${(receptiveF / fem).toFixed(2)} pregnant=${(pregnant / fem).toFixed(2)}`,
+  );
+  console.log(
+    '   ' +
+      [...acts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `${names[k]}:${Math.round((100 * v) / total)}%`)
+        .join(' '),
+  );
 }

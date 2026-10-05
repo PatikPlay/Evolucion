@@ -30,7 +30,8 @@ export class SpatialGrid {
   }
 
   rebuild(alive: Uint8Array, xs: Float32Array, ys: Float32Array, high: number): void {
-    if (this.items.length < high) this.items = new Int32Array(Math.max(high, this.items.length * 2));
+    if (this.items.length < high)
+      this.items = new Int32Array(Math.max(high, this.items.length * 2));
     const counts = this.counts;
     counts.fill(0);
     for (let i = 0; i < high; i++) {
@@ -56,7 +57,15 @@ export class SpatialGrid {
    * Collects slots within `radius` of (x, y) into `out` (up to out.length),
    * nearest buckets first is not guaranteed. Returns the number written.
    */
-  query(x: number, y: number, radius: number, xs: Float32Array, ys: Float32Array, out: Int32Array, exclude = -1): number {
+  query(
+    x: number,
+    y: number,
+    radius: number,
+    xs: Float32Array,
+    ys: Float32Array,
+    out: Int32Array,
+    exclude = -1,
+  ): number {
     const r2 = radius * radius;
     const cs = this.cellSize;
     const x0 = Math.max(0, Math.floor((x - radius) / cs));

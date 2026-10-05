@@ -57,7 +57,17 @@ export class MomentLog {
     if (o.generation[i] === 0) return;
     for (const c of CAPABILITIES) {
       if (fresh & c.bit) {
-        this.add({ tick: sim.tick, kind: 'firstCapability', x: o.x[i] as number, y: o.y[i] as number, subject: o.id[i] as number, species: info.id, lineage: info.lineage, importance: 8, detail: c.key });
+        this.add({
+          tick: sim.tick,
+          kind: 'firstCapability',
+          x: o.x[i] as number,
+          y: o.y[i] as number,
+          subject: o.id[i] as number,
+          species: info.id,
+          lineage: info.lineage,
+          importance: 8,
+          detail: c.key,
+        });
       }
     }
   }
@@ -65,7 +75,17 @@ export class MomentLog {
   macromutant(sim: ParcelSim, i: number, locus: number): void {
     const o = sim.org;
     this.add(
-      { tick: sim.tick, kind: 'macromutant', x: o.x[i] as number, y: o.y[i] as number, subject: o.id[i] as number, species: o.species[i] as number, lineage: o.lineage[i] as number, importance: 5, detail: LOCI[locus]?.key ?? '' },
+      {
+        tick: sim.tick,
+        kind: 'macromutant',
+        x: o.x[i] as number,
+        y: o.y[i] as number,
+        subject: o.id[i] as number,
+        species: o.species[i] as number,
+        lineage: o.lineage[i] as number,
+        importance: 5,
+        detail: LOCI[locus]?.key ?? '',
+      },
       `macro-${o.species[i]}`,
       200,
     );
@@ -74,7 +94,17 @@ export class MomentLog {
   packHunt(sim: ParcelSim, hunter: number, prey: number, size: number): void {
     const o = sim.org;
     this.add(
-      { tick: sim.tick, kind: 'packHunt', x: o.x[prey] as number, y: o.y[prey] as number, subject: o.id[hunter] as number, species: o.species[hunter] as number, lineage: o.lineage[hunter] as number, importance: 6, detail: String(size) },
+      {
+        tick: sim.tick,
+        kind: 'packHunt',
+        x: o.x[prey] as number,
+        y: o.y[prey] as number,
+        subject: o.id[hunter] as number,
+        species: o.species[hunter] as number,
+        lineage: o.lineage[hunter] as number,
+        importance: 6,
+        detail: String(size),
+      },
       `pack-${o.species[hunter]}`,
       600,
     );
@@ -94,7 +124,17 @@ export class MomentLog {
       const alive = sim.speciesPop.get(sp) ?? 0;
       if (list.length > 0.12 * (alive + list.length)) {
         this.add(
-          { tick: sim.tick, kind: 'massDeath', x: o.x[i] as number, y: o.y[i] as number, subject: o.id[i] as number, species: sp, lineage: o.lineage[i] as number, importance: 9, detail: String(cause) },
+          {
+            tick: sim.tick,
+            kind: 'massDeath',
+            x: o.x[i] as number,
+            y: o.y[i] as number,
+            subject: o.id[i] as number,
+            species: sp,
+            lineage: o.lineage[i] as number,
+            importance: 9,
+            detail: String(cause),
+          },
           `mass-${sp}`,
           400,
         );

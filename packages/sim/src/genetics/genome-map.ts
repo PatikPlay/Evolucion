@@ -42,7 +42,14 @@ export const LOCI: readonly LocusDef[] = [
   { key: 'conspicuous', kind: 'trait', effects: [[T.Conspicuous, 1]] },
   { key: 'spots', kind: 'trait', effects: [[T.Spots, 1]], macro: 'up' },
   { key: 'stripes', kind: 'trait', effects: [[T.Stripes, 1]], macro: 'up' },
-  { key: 'eyeSize', kind: 'trait', effects: [[T.EyeSize, 1], [T.NightVision, 0.4]] },
+  {
+    key: 'eyeSize',
+    kind: 'trait',
+    effects: [
+      [T.EyeSize, 1],
+      [T.NightVision, 0.4],
+    ],
+  },
   { key: 'nightVision', kind: 'trait', effects: [[T.NightVision, 0.9]] },
   { key: 'smell', kind: 'trait', effects: [[T.Smell, 1]] },
   { key: 'hearing', kind: 'trait', effects: [[T.Hearing, 1]] },
@@ -52,7 +59,14 @@ export const LOCI: readonly LocusDef[] = [
   { key: 'fatReserves', kind: 'trait', effects: [[T.FatReserves, 1]] },
   { key: 'longevity', kind: 'trait', effects: [[T.Longevity, 1]] },
   { key: 'carnivory1', kind: 'trait', effects: [[T.Carnivory, 0.8]] },
-  { key: 'carnivory2', kind: 'trait', effects: [[T.Carnivory, 0.8], [T.FiberDigestion, -0.3]] },
+  {
+    key: 'carnivory2',
+    kind: 'trait',
+    effects: [
+      [T.Carnivory, 0.8],
+      [T.FiberDigestion, -0.3],
+    ],
+  },
   { key: 'fiberDigestion', kind: 'trait', effects: [[T.FiberDigestion, 1]] },
   { key: 'plantToxinTolerance', kind: 'trait', effects: [[T.PlantToxinTolerance, 1]] },
   { key: 'toxinProduction', kind: 'trait', effects: [[T.ToxinProduction, 1]] },
@@ -77,29 +91,124 @@ export const LOCI: readonly LocusDef[] = [
 
   // --- Pleiotropic loci: selecting one visible trait drags hidden ones along ---
   // Growth: bigger bodies mature later and live longer.
-  { key: 'growthHormone', kind: 'pleiotropic', effects: [[T.Mass, 0.6], [T.Growth, 0.7], [T.Longevity, 0.3]] },
+  {
+    key: 'growthHormone',
+    kind: 'pleiotropic',
+    effects: [
+      [T.Mass, 0.6],
+      [T.Growth, 0.7],
+      [T.Longevity, 0.3],
+    ],
+  },
   // Neural crest (Belyaev's foxes): tamer animals get spots, shorter tails and paler coats.
-  { key: 'neuralCrest', kind: 'pleiotropic', effects: [[T.Fear, -0.6], [T.Aggression, -0.45], [T.Spots, 0.6], [T.Tail, -0.4], [T.Lightness, 0.3]] },
+  {
+    key: 'neuralCrest',
+    kind: 'pleiotropic',
+    effects: [
+      [T.Fear, -0.6],
+      [T.Aggression, -0.45],
+      [T.Spots, 0.6],
+      [T.Tail, -0.4],
+      [T.Lightness, 0.3],
+    ],
+  },
   // Metabolic pace: faster, warmer and longer-legged, but shorter-lived.
-  { key: 'metabolicPace', kind: 'pleiotropic', effects: [[T.Metabolism, 0.7], [T.LegLength, 0.25], [T.Longevity, -0.45], [T.ColdTolerance, 0.2]] },
+  {
+    key: 'metabolicPace',
+    kind: 'pleiotropic',
+    effects: [
+      [T.Metabolism, 0.7],
+      [T.LegLength, 0.25],
+      [T.Longevity, -0.45],
+      [T.ColdTolerance, 0.2],
+    ],
+  },
   // Pigment pathway: bright colours share machinery with toxin synthesis.
-  { key: 'pigment', kind: 'pleiotropic', effects: [[T.Conspicuous, 0.7], [T.ToxinProduction, 0.4], [T.Hue, 0.3]] },
+  {
+    key: 'pigment',
+    kind: 'pleiotropic',
+    effects: [
+      [T.Conspicuous, 0.7],
+      [T.ToxinProduction, 0.4],
+      [T.Hue, 0.3],
+    ],
+  },
   // Bone density: stronger legs and plates, shorter legs.
-  { key: 'bone', kind: 'pleiotropic', effects: [[T.LegStrength, 0.6], [T.Armor, 0.5], [T.LegLength, -0.3]] },
+  {
+    key: 'bone',
+    kind: 'pleiotropic',
+    effects: [
+      [T.LegStrength, 0.6],
+      [T.Armor, 0.5],
+      [T.LegLength, -0.3],
+    ],
+  },
   // Neural development: bigger brains, more curiosity, slower maturation.
-  { key: 'neural', kind: 'pleiotropic', effects: [[T.Brain, 0.6], [T.Curiosity, 0.4], [T.Growth, 0.3], [T.Sociability, 0.2]] },
+  {
+    key: 'neural',
+    kind: 'pleiotropic',
+    effects: [
+      [T.Brain, 0.6],
+      [T.Curiosity, 0.4],
+      [T.Growth, 0.3],
+      [T.Sociability, 0.2],
+    ],
+  },
 
   // --- Latent loci: nearly neutral until the environment changes ---
   { key: 'waterEfficiency1', kind: 'latent', effects: [[T.WaterEfficiency, 1]] },
-  { key: 'waterEfficiency2', kind: 'latent', effects: [[T.WaterEfficiency, 0.8], [T.HeatTolerance, 0.2]] },
+  {
+    key: 'waterEfficiency2',
+    kind: 'latent',
+    effects: [
+      [T.WaterEfficiency, 0.8],
+      [T.HeatTolerance, 0.2],
+    ],
+  },
   { key: 'algaeDigestion', kind: 'latent', effects: [[T.AlgaeDigestion, 1.1]] },
-  { key: 'detox', kind: 'latent', effects: [[T.PlantToxinTolerance, 0.6], [T.ToxinResistance, 0.35]] },
+  {
+    key: 'detox',
+    kind: 'latent',
+    effects: [
+      [T.PlantToxinTolerance, 0.6],
+      [T.ToxinResistance, 0.35],
+    ],
+  },
 
   // --- Cryptic loci: effects buffered by canalisation, released by stress ---
-  { key: 'crypticLimb', kind: 'cryptic', effects: [[T.LegLength, 0.9], [T.Mass, -0.3]] },
-  { key: 'crypticCoat', kind: 'cryptic', effects: [[T.Fur, 0.9], [T.FatReserves, 0.4]] },
-  { key: 'crypticDiet', kind: 'cryptic', effects: [[T.Carnivory, 0.8], [T.Aggression, 0.3]] },
-  { key: 'crypticSkin', kind: 'cryptic', effects: [[T.Membranes, 0.6], [T.Prehensile, 0.5], [T.Fins, 0.4]] },
+  {
+    key: 'crypticLimb',
+    kind: 'cryptic',
+    effects: [
+      [T.LegLength, 0.9],
+      [T.Mass, -0.3],
+    ],
+  },
+  {
+    key: 'crypticCoat',
+    kind: 'cryptic',
+    effects: [
+      [T.Fur, 0.9],
+      [T.FatReserves, 0.4],
+    ],
+  },
+  {
+    key: 'crypticDiet',
+    kind: 'cryptic',
+    effects: [
+      [T.Carnivory, 0.8],
+      [T.Aggression, 0.3],
+    ],
+  },
+  {
+    key: 'crypticSkin',
+    kind: 'cryptic',
+    effects: [
+      [T.Membranes, 0.6],
+      [T.Prehensile, 0.5],
+      [T.Fins, 0.4],
+    ],
+  },
 
   // --- Mate-recognition loci: neutral, faster mutating; drive reproductive isolation ---
   { key: 'recognition1', kind: 'recognition', effects: [] },
@@ -116,8 +225,12 @@ export const ALLELES_PER_GENOME = LOCUS_COUNT * 2;
 export const DELETERIOUS_LOCI = 24;
 export const DELETERIOUS_MASK = (1 << DELETERIOUS_LOCI) - 1;
 
-export const LOCUS_INDEX: Readonly<Record<string, number>> = Object.fromEntries(LOCI.map((l, i) => [l.key, i]));
-export const RECOGNITION_LOCI: readonly number[] = LOCI.flatMap((l, i) => (l.kind === 'recognition' ? [i] : []));
+export const LOCUS_INDEX: Readonly<Record<string, number>> = Object.fromEntries(
+  LOCI.map((l, i) => [l.key, i]),
+);
+export const RECOGNITION_LOCI: readonly number[] = LOCI.flatMap((l, i) =>
+  l.kind === 'recognition' ? [i] : [],
+);
 export const MACRO_LOCI: readonly number[] = LOCI.flatMap((l, i) => (l.macro ? [i] : []));
 
 /** Flattened effect table for fast expression: per locus a slice of (trait, weight) pairs. */

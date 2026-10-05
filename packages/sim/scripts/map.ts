@@ -14,4 +14,9 @@ for (let y = 0; y < t.height; y += 2) {
 }
 let far = 0;
 for (let i = 0; i < t.size; i++) far = Math.max(far, w.access.waterDistance[i] as number);
-console.log('max water distance', far, 'productivity', Math.round(w.vegetation.productivityEstimate()));
+console.log(
+  'max water distance',
+  far,
+  'productivity',
+  Math.round(w.vegetation.productivityEstimate()),
+);

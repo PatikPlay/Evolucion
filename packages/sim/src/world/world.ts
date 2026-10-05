@@ -52,7 +52,8 @@ export function createWorld(rng: Rng, cfg: SimConfig): World {
   for (let pass = 0; pass < 2; pass++) {
     const est = world.vegetation.productivityEstimate();
     const scale = target / est;
-    for (let i = 0; i < terrain.size; i++) terrain.fertility[i] = (terrain.fertility[i] as number) * scale;
+    for (let i = 0; i < terrain.size; i++)
+      terrain.fertility[i] = (terrain.fertility[i] as number) * scale;
     world.vegetation.recomputeAllCapacity();
   }
   for (let p = 0; p < PLANT_TYPES; p++) {

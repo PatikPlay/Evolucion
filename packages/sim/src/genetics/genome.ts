@@ -34,7 +34,11 @@ export function geneticValues(
   out.fill(0);
   const { effectStart, effectTrait, effectWeight, dominance, cryptic } = map;
   for (let l = 0; l < LOCUS_COUNT; l++) {
-    const v = locusValue(alleles[offset + 2 * l] as number, alleles[offset + 2 * l + 1] as number, dominance[l] as number);
+    const v = locusValue(
+      alleles[offset + 2 * l] as number,
+      alleles[offset + 2 * l + 1] as number,
+      dominance[l] as number,
+    );
     if (v === 0) continue;
     const scale = cryptic[l] ? canalisation : 1;
     const end = effectStart[l + 1] as number;
@@ -47,7 +51,13 @@ export function geneticValues(
 }
 
 /** Expresses a genome into [0,1] trait values. */
-export function expressGenome(alleles: Float32Array, offset: number, out: Float32Array, outOffset: number, canalisation: number): void {
+export function expressGenome(
+  alleles: Float32Array,
+  offset: number,
+  out: Float32Array,
+  outOffset: number,
+  canalisation: number,
+): void {
   const g = geneticValues(alleles, offset, canalisation);
   for (let t = 0; t < TRAIT_COUNT; t++) out[outOffset + t] = sigmoid(g[t] as number);
 }
@@ -89,7 +99,8 @@ export function inheritAlleles(
     child[cOff + 2 * l + 1] = father[fOff + 2 * l + bf] as number;
   }
   // Point mutations: draw the number of mutations instead of one coin per allele.
-  const expected = mut.rate * (ALLELES_PER_GENOME + RECOGNITION_LOCI.length * 2 * (mut.recognitionMult - 1));
+  const expected =
+    mut.rate * (ALLELES_PER_GENOME + RECOGNITION_LOCI.length * 2 * (mut.recognitionMult - 1));
   let n = poisson(rng, expected);
   while (n-- > 0) {
     // Recognition loci are proportionally more likely to be hit.
@@ -114,7 +125,12 @@ export function macroMutate(child: Float32Array, cOff: number, rng: Rng, size: n
 }
 
 /** Inherits one haplotype mask from a parent's two masks (free recombination). */
-export function inheritHaplotype(h0: number, h1: number, rng: Rng, deleteriousRate: number): number {
+export function inheritHaplotype(
+  h0: number,
+  h1: number,
+  rng: Rng,
+  deleteriousRate: number,
+): number {
   const mask = rng.nextU32() & DELETERIOUS_MASK;
   let h = ((h0 & mask) | (h1 & ~mask)) & DELETERIOUS_MASK;
   if (rng.float() < deleteriousRate * DELETERIOUS_LOCI) h |= 1 << rng.int(DELETERIOUS_LOCI);
@@ -133,7 +149,12 @@ export function deleteriousLoad(h0: number, h1: number): number {
 }
 
 /** Squared distance between two genomes over the mate-recognition loci (per locus mean). */
-export function recognitionDistance2(a: Float32Array, aOff: number, b: Float32Array, bOff: number): number {
+export function recognitionDistance2(
+  a: Float32Array,
+  aOff: number,
+  b: Float32Array,
+  bOff: number,
+): number {
   let s = 0;
   for (let k = 0; k < RECOGNITION_LOCI.length; k++) {
     const l = RECOGNITION_LOCI[k] as number;

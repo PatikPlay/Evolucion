@@ -9,6 +9,7 @@ import { Season, seasonOf } from '../time';
 import { hueDistance } from '../math';
 import { faunaRate, plantRateAt } from '../ecology/feeding';
 import { tryInfect } from '../ecology/health';
+import { currentMaxSpeed } from './execute';
 import { BIOME_COVER } from '../world/terrain';
 
 const NEIGH = new Int32Array(192);
@@ -26,7 +27,11 @@ const BIOME_HUE = [0.28, 0.33, 0.22, 0.12, 0.08, 0.5, 0.55];
 export function power(sim: ParcelSim, i: number): number {
   const q = i * DERIVED_COUNT;
   const d = sim.org.derived;
-  return (d[q + D.Strength] as number) * (d[q + D.M075] as number) * (0.6 + 0.4 * (sim.org.health[i] as number));
+  return (
+    (d[q + D.Strength] as number) *
+    (d[q + D.M075] as number) *
+    (0.6 + 0.4 * (sim.org.health[i] as number))
+  );
 }
 
 /** Resistance of organism `i` to an attack (size, armour, spines, condition). */
@@ -53,11 +58,21 @@ export function detectability(sim: ParcelSim, j: number): number {
   const p = j * TRAIT_COUNT;
   const consp = o.pheno[p + T.Conspicuous] as number;
   // Colour matching the ground hides cryptic animals, especially when still.
-  const match = 1 - Math.min(1, hueDistance(visualHue(o.pheno[p + T.Hue] as number), BIOME_HUE[sim.world.terrain.biome[c] as number] as number) * 5);
-  const still = (o.speed[j] as number) < 0.03 ? 1 : 0.4;
+  const match =
+    1 -
+    Math.min(
+      1,
+      hueDistance(
+        visualHue(o.pheno[p + T.Hue] as number),
+        BIOME_HUE[sim.world.terrain.biome[c] as number] as number,
+      ) * 5,
+    );
+  const speed = o.speed[j] as number;
+  const still = speed < 0.03 ? 1 : 0.4;
   v *= 1 - 0.55 * (1 - consp) * match * still;
   if ((o.capabilities[j] as number) & Cap.Camouflage && still === 1) v *= 0.6;
-  if ((o.speed[j] as number) > 0.15) v *= 1.25;
+  // Movement draws the eye: slow, stalking movement much less than running.
+  v *= 0.35 + 0.9 * Math.min(1, speed / 0.2);
   return v < 0.08 ? 0.08 : v;
 }
 
@@ -69,8 +84,13 @@ export function visualHue(trait: number): number {
 export function coverAt(sim: ParcelSim, c: number): number {
   const t = sim.world.terrain;
   const veg = sim.world.vegetation;
-  const plants = ((veg.biomass[1] as Float32Array)[c] as number) / 12 + ((veg.biomass[2] as Float32Array)[c] as number) / 30;
-  return (BIOME_COVER[t.biome[c] as number] as number) * (0.5 + 0.5 * Math.min(1, plants)) + (t.refuge[c] ? 0.5 : 0);
+  const plants =
+    ((veg.biomass[1] as Float32Array)[c] as number) / 12 +
+    ((veg.biomass[2] as Float32Array)[c] as number) / 30;
+  return (
+    (BIOME_COVER[t.biome[c] as number] as number) * (0.5 + 0.5 * Math.min(1, plants)) +
+    (t.refuge[c] ? 0.5 : 0)
+  );
 }
 
 /** How dangerous organism `j` is to organism `i` (0 = harmless). */
@@ -88,8 +108,10 @@ export function danger(sim: ParcelSim, j: number, i: number, resistI: number): n
 function preyValue(sim: ParcelSim, i: number, j: number, myPower: number, d: number): number {
   const o = sim.org;
   if (o.species[j] === o.species[i]) return 0;
-  if ((o.flags[j] as number) & Flag.Burrowed && !((o.capabilities[i] as number) & Cap.Dig)) return 0;
-  if ((o.flags[j] as number) & Flag.Climbing && !((o.capabilities[i] as number) & Cap.Climb)) return 0;
+  if ((o.flags[j] as number) & Flag.Burrowed && !((o.capabilities[i] as number) & Cap.Dig))
+    return 0;
+  if ((o.flags[j] as number) & Flag.Climbing && !((o.capabilities[i] as number) & Cap.Climb))
+    return 0;
   const rj = resistance(sim, j);
   let pSucc = myPower / (myPower + rj);
   if ((o.capabilities[i] as number) & Cap.PackHunt) pSucc = Math.min(0.95, pSucc * 1.5);
@@ -99,11 +121,14 @@ function preyValue(sim: ParcelSim, i: number, j: number, myPower: number, d: num
   // Learned aversion to prey that looks like something toxic eaten before.
   const av = o.aversion[i] as number;
   if (av > 0.01) {
-    const similar = 1 - Math.min(1, hueDistance(o.pheno[pj + T.Hue] as number, o.aversionHue[i] as number) * 6);
-    v *= 1 - Math.min(1, av * similar * (0.4 + 0.6 * (o.pheno[pj + T.Conspicuous] as number)) * 1.5);
+    const similar =
+      1 - Math.min(1, hueDistance(o.pheno[pj + T.Hue] as number, o.aversionHue[i] as number) * 6);
+    v *=
+      1 - Math.min(1, av * similar * (0.4 + 0.6 * (o.pheno[pj + T.Conspicuous] as number)) * 1.5);
   }
-  // Prey faster than us is a poor bet.
-  if (sim.der(j, D.MaxSpeed) > sim.der(i, D.MaxSpeed) * 1.1) v *= 0.5;
+  // Hunters pick prey they can run down: the young, the slow, the lame.
+  const ratio = currentMaxSpeed(sim, i) / Math.max(0.01, currentMaxSpeed(sim, j));
+  v *= Math.min(2.5, Math.max(0.1, ratio * ratio * ratio));
   return v / (1 + d * 0.12);
 }
 
@@ -113,7 +138,8 @@ function growJuvenile(sim: ParcelSim, i: number, age: number, maturity: number):
   const q = i * DERIVED_COUNT;
   const maxE = o.derived[q + D.MaxEnergy] as number;
   const frac = (o.energy[i] as number) / maxE;
-  o.nutrition[i] = (o.nutrition[i] as number) + (Math.min(1, frac / 0.7) - (o.nutrition[i] as number)) * 0.08;
+  o.nutrition[i] =
+    (o.nutrition[i] as number) + (Math.min(1, frac / 0.7) - (o.nutrition[i] as number)) * 0.08;
   const pot = o.derived[q + D.AdultMassPotential] as number;
   const target = pot * (0.7 + 0.3 * (o.nutrition[i] as number));
   const birth = o.birthMass[i] as number;
@@ -159,7 +185,8 @@ export function think(sim: ParcelSim, i: number): void {
     if (o.generation[i] !== 0 && cfg.organisms.natalDispersal > 0) {
       // Habitat selection: scout a few places and settle in the best one
       // (food, water, few conspecifics), so the range expands into empty land.
-      const reach = 6 + 18 * (ph[P + T.Curiosity] as number);
+      // Males usually disperse farther than females (keeps kin apart).
+      const reach = (6 + 18 * (ph[P + T.Curiosity] as number)) * (o.sex[i] === 1 ? 1.5 : 1);
       let hx = x;
       let hy = y;
       let bestS = -Infinity;
@@ -202,7 +229,8 @@ export function think(sim: ParcelSim, i: number): void {
   const climate = sim.world.climate;
   const dark = climate.darknessNow;
   const noct = ph[P + T.Nocturnality] as number;
-  const perception = (der[Q + D.Perception] as number) * (1 - dark) + (der[Q + D.NightPerception] as number) * dark;
+  const perception =
+    (der[Q + D.Perception] as number) * (1 - dark) + (der[Q + D.NightPerception] as number) * dark;
   const activity = dark * noct + (1 - dark) * (1 - noct);
   const season = seasonOf(tick);
   const caps = o.capabilities[i] as number;
@@ -251,6 +279,8 @@ export function think(sim: ParcelSim, i: number): void {
   let gy = 0;
   let gn = 0;
   let close = 0;
+  // Interference: heavier animals feeding close by push smaller ones off the best patches.
+  let pushed = 0;
   let crowd = 0;
   const homeX = o.homeX[i] as number;
   const homeY = o.homeY[i] as number;
@@ -260,13 +290,19 @@ export function think(sim: ParcelSim, i: number): void {
   const prefS = ph[P + T.PrefSize] as number;
   const myMass = o.mass[i] as number;
 
-  const n = sim.grid.query(x, y, perception, o.x, o.y, NEIGH, i);
+  const scentRange = 2 + 6 * (ph[P + T.Smell] as number);
+  const n = sim.grid.query(x, y, Math.max(perception, scentRange), o.x, o.y, NEIGH, i);
   for (let k = 0; k < n; k++) {
     const j = NEIGH[k] as number;
     const dx = (o.x[j] as number) - x;
     const dy = (o.y[j] as number) - y;
     const d2 = dx * dx + dy * dy;
-    if (d2 < 4) crowd++;
+    if (d2 < 4) {
+      crowd++;
+      const mj = o.mass[j] as number;
+      if (mj > myMass && Math.abs((o.pheno[j * TRAIT_COUNT + T.Carnivory] as number) - carn) < 0.35)
+        pushed += Math.min(2, mj / myMass - 1);
+    }
     if (infected && d2 < contact2) tryInfect(sim, i, j);
     if (o.species[j] === species) {
       gx += o.x[j] as number;
@@ -276,7 +312,8 @@ export function think(sim: ParcelSim, i: number): void {
       const jAdult = sim.isAdult(j);
       if (!jAdult) {
         if (o.motherId[j] === myId) {
-          const need = 1 - (o.energy[j] as number) / (o.derived[j * DERIVED_COUNT + D.MaxEnergy] as number);
+          const need =
+            1 - (o.energy[j] as number) / (o.derived[j * DERIVED_COUNT + D.MaxEnergy] as number);
           if (need > youngNeed) {
             youngNeed = need;
             youngJ = j;
@@ -286,12 +323,29 @@ export function think(sim: ParcelSim, i: number): void {
       }
       if (o.id[j] === o.motherId[i]) motherNear = j;
       if (o.sex[j] !== sex) {
-        if (receptive && tick >= (o.cooldownUntil[j] as number) && !((o.flags[j] as number) & Flag.Pregnant)) {
+        if (
+          receptive &&
+          tick >= (o.cooldownUntil[j] as number) &&
+          !((o.flags[j] as number) & Flag.Pregnant)
+        ) {
           const pj = j * TRAIT_COUNT;
           // Females choose by visible traits; males simply approach the nearest receptive female.
-          const s = female
-            ? (0.3 + prefC * (o.pheno[pj + T.Conspicuous] as number) * 1.5 + prefS * Math.min(2, (o.mass[j] as number) / myMass)) / (1 + Math.sqrt(d2) * 0.1)
-            : 1 / (1 + Math.sqrt(d2));
+          // Close kin (parents, offspring, siblings) are avoided while there is any choice.
+          const kin =
+            o.id[j] === o.motherId[i] ||
+            o.id[j] === o.fatherId[i] ||
+            o.motherId[j] === myId ||
+            o.fatherId[j] === myId ||
+            ((o.motherId[j] as number) !== 0 && o.motherId[j] === o.motherId[i]) ||
+            ((o.fatherId[j] as number) !== 0 && o.fatherId[j] === o.fatherId[i]);
+          const s =
+            (kin ? 0.08 : 1) *
+            (female
+              ? (0.3 +
+                  prefC * (o.pheno[pj + T.Conspicuous] as number) * 1.5 +
+                  prefS * Math.min(2, (o.mass[j] as number) / myMass)) /
+                (1 + Math.sqrt(d2) * 0.1)
+              : 1 / (1 + Math.sqrt(d2)));
           if (s > mateScore) {
             mateScore = s;
             mateJ = j;
@@ -307,9 +361,10 @@ export function think(sim: ParcelSim, i: number): void {
       }
       continue;
     }
-    // Other species: only what we actually notice counts.
+    // Other species: only what we actually notice counts. Hunters also track
+    // prey by scent, whatever it looks like.
     const d = Math.sqrt(d2);
-    if (d > perception * detectability(sim, j)) continue;
+    if (d > perception * detectability(sim, j) && !(carn > 0.45 && d < scentRange)) continue;
     const dang = danger(sim, j, i, myResist);
     if (dang > 0) {
       const s = dang * (1 - d / (perception + 1));
@@ -326,15 +381,24 @@ export function think(sim: ParcelSim, i: number): void {
       }
     }
     // Other lineages competing for the same food are rivals too (after the Great Exchange).
-    if (territorial && adult && o.lineage[j] !== o.lineage[i] && d2 < 16 && Math.abs((o.pheno[j * TRAIT_COUNT + T.Carnivory] as number) - carn) < 0.3 && d2 < rivalDist) {
+    if (
+      territorial &&
+      adult &&
+      o.lineage[j] !== o.lineage[i] &&
+      d2 < 16 &&
+      Math.abs((o.pheno[j * TRAIT_COUNT + T.Carnivory] as number) - carn) < 0.3 &&
+      d2 < rivalDist
+    ) {
       rivalDist = d2;
       rivalJ = j;
     }
   }
   o.huddle[i] = close;
+  o.feedShare[i] = 1 / (1 + cfg.organisms.interference * pushed);
   // Calls and scent marks: receptive animals locate mates far beyond sight.
   if (receptive && mateJ < 0) {
-    const callRange = perception + 6 + 10 * (((ph[P + T.Smell] as number) + (ph[P + T.Hearing] as number)) * 0.5);
+    const callRange =
+      perception + 6 + 10 * (((ph[P + T.Smell] as number) + (ph[P + T.Hearing] as number)) * 0.5);
     const m = sim.grid.query(x, y, callRange, o.x, o.y, NEIGH, i);
     let bestD = Infinity;
     for (let k = 0; k < m; k++) {
@@ -347,7 +411,6 @@ export function think(sim: ParcelSim, i: number): void {
         mateJ = j;
       }
     }
-    if (mateJ >= 0) mateScore = 0.5;
   }
   if (!infected && crowd >= 6 && rng.float() < cfg.disease.spontaneous * crowd * crowd) {
     o.infection[i] = 1;
@@ -359,9 +422,17 @@ export function think(sim: ParcelSim, i: number): void {
     const ap = cfg.ambientPredation;
     const sizeF = 1 / (1 + Math.pow(myMass / ap.halfMass, 2));
     const alert = 1 - 0.35 * (ph[P + T.Hearing] as number) - 0.25 * fear - (gn >= 3 ? 0.15 : 0);
-    const escape = 1 / (0.6 + (der[Q + D.MaxSpeed] as number) / 0.24 * 0.4);
+    const escape = 1 / (0.6 + ((der[Q + D.MaxSpeed] as number) / 0.24) * 0.4);
     const guarded = !adult && motherNear >= 0 ? 0.5 : 1;
-    const risk = ap.base * cfg.organisms.thinkInterval * sizeF * detectability(sim, i) * alert * escape * guarded * (flags & Flag.Climbing ? 0.5 : 1);
+    const risk =
+      ap.base *
+      cfg.organisms.thinkInterval *
+      sizeF *
+      detectability(sim, i) *
+      alert *
+      escape *
+      guarded *
+      (flags & Flag.Climbing ? 0.5 : 1);
     if (rng.float() < risk) {
       sim.kill(i, Death.Predation);
       return;
@@ -421,23 +492,55 @@ export function think(sim: ParcelSim, i: number): void {
     carcass = sim.world.carcasses.nearest(x, y, perception);
     if (carcass >= 0) {
       const bite = cfg.organisms.biteCoeff * (der[Q + D.M075] as number);
-      const dist = Math.hypot((sim.world.carcasses.x[carcass] as number) - x, (sim.world.carcasses.y[carcass] as number) - y);
-      scavengeRate = (Math.min(bite, sim.world.carcasses.meat[carcass] as number) * (der[Q + D.EffMeat] as number)) / (1 + 0.15 * dist);
+      const dist = Math.hypot(
+        (sim.world.carcasses.x[carcass] as number) - x,
+        (sim.world.carcasses.y[carcass] as number) - y,
+      );
+      scavengeRate =
+        (Math.min(bite, sim.world.carcasses.meat[carcass] as number) *
+          (der[Q + D.EffMeat] as number)) /
+        (1 + 0.15 * dist);
     }
   }
-  const huntRate = preyJ >= 0 ? preyScore * cfg.organisms.biteCoeff * (der[Q + D.M075] as number) * (der[Q + D.EffMeat] as number) * 2.5 : 0;
+  // A hunt is uncertain; preyScore already folds in the odds of success.
+  const huntRate =
+    preyJ >= 0
+      ? preyScore *
+        cfg.organisms.biteCoeff *
+        (der[Q + D.M075] as number) *
+        (der[Q + D.EffMeat] as number) *
+        0.9
+      : 0;
   const foodDrive = Math.pow(hunger, 1.2) * 1.5;
 
   U.fill(0);
   U[Act.Graze] = grazeCell >= 0 ? foodDrive * sat(grazeRate, basalNeed) : 0;
   U[Act.Forage] = foodDrive * sat(forageRate, basalNeed) * 0.9;
-  U[Act.Scavenge] = carcass >= 0 ? foodDrive * sat(scavengeRate, basalNeed) : 0;
-  U[Act.Hunt] = preyJ >= 0 ? foodDrive * sat(huntRate, basalNeed) * (0.6 + 0.8 * aggression) : 0;
+  // Food already within reach beats food that has to be caught.
+  const atCarcass =
+    carcass >= 0 &&
+    Math.hypot(
+      (sim.world.carcasses.x[carcass] as number) - x,
+      (sim.world.carcasses.y[carcass] as number) - y,
+    ) < 1.5;
+  U[Act.Scavenge] =
+    carcass >= 0 ? foodDrive * sat(scavengeRate, basalNeed) * (atCarcass ? 1.6 : 1) : 0;
+  U[Act.Hunt] = preyJ >= 0 ? foodDrive * sat(huntRate, basalNeed) * (0.75 + 0.5 * aggression) : 0;
   U[Act.Drink] = Math.pow(thirst, 1.4) * 1.7;
   if (threatJ >= 0) U[Act.Flee] = (0.45 + 0.9 * fear) * Math.min(1, threatScore * 2.5) + 0.1;
-  U[Act.Hide] = fear * (0.3 * recentThreat + 0.5 * Math.min(1, threatScore * 2)) * (sim.world.access.shelterDistance[cell]! < 6 ? 1 : 0.4);
+  U[Act.Hide] =
+    fear *
+    (0.3 * recentThreat + 0.5 * Math.min(1, threatScore * 2)) *
+    (sim.world.access.shelterDistance[cell]! < 6 ? 1 : 0.4);
   if (mateJ >= 0) {
-    const seasonF = season === Season.Spring ? 1.3 : season === Season.Summer ? 1 : season === Season.Autumn ? 0.55 : 0.2;
+    const seasonF =
+      season === Season.Spring
+        ? 1.3
+        : season === Season.Summer
+          ? 1
+          : season === Season.Autumn
+            ? 0.55
+            : 0.2;
     const threshold = female ? cfg.reproduction.breedEnergy : cfg.reproduction.maleBreedEnergy;
     const surplus = Math.min(1, (energyFrac - threshold) / (1 - threshold));
     U[Act.Court] = (0.25 + 0.4 * seasonF) * Math.sqrt(Math.max(0, surplus));
@@ -448,21 +551,43 @@ export function think(sim: ParcelSim, i: number): void {
     const dc = Math.sqrt(cxg * cxg + cyg * cyg);
     U[Act.FollowGroup] = sociability * 0.45 * Math.min(1, dc / 4);
   }
-  if (!adult && motherNear >= 0) U[Act.FollowGroup] = Math.max(U[Act.FollowGroup] as number, 0.55 * (1 - age / maturity));
-  if (rivalJ >= 0) U[Act.Defend] = (ph[P + T.Territoriality] as number) * (0.4 + aggression) * 0.55 * (1 - hunger * 0.5);
-  if (youngJ >= 0 && energyFrac > 0.35) U[Act.CareYoung] = (ph[P + T.ParentalCare] as number) * youngNeed * 1.1;
+  if (!adult && motherNear >= 0)
+    U[Act.FollowGroup] = Math.max(U[Act.FollowGroup] as number, 0.55 * (1 - age / maturity));
+  if (rivalJ >= 0)
+    U[Act.Defend] =
+      (ph[P + T.Territoriality] as number) * (0.4 + aggression) * 0.55 * (1 - hunger * 0.5);
+  if (youngJ >= 0 && energyFrac > 0.35)
+    U[Act.CareYoung] = (ph[P + T.ParentalCare] as number) * youngNeed * 1.1;
   U[Act.Rest] = fatigue * 0.7 + (1 - activity) * 0.42 * (1 - hunger * 0.5);
   U[Act.Explore] = 0.06 + (ph[P + T.Curiosity] as number) * 0.12;
-  // Nothing worth eating around: go and look elsewhere.
-  if (hunger > 0.3) U[Act.Explore] = (U[Act.Explore] as number) + foodDrive * 0.35 * (1 - sat(Math.max(grazeRate, forageRate), basalNeed));
-  if (caps & Cap.Dig && adult && (sim.world.terrain.burrow[sim.world.terrain.index(homeX, homeY)] as number) < 0.8) {
-    U[Act.Dig] = 0.12 + (season === Season.Autumn || season === Season.Winter ? 0.25 : 0) * (1 - hunger);
+  // Nothing worth eating around: go and look elsewhere. Hungry hunters patrol.
+  if (hunger > 0.3)
+    U[Act.Explore] =
+      (U[Act.Explore] as number) +
+      foodDrive * 0.35 * (1 - sat(Math.max(grazeRate, forageRate), basalNeed));
+  if (carn > 0.5 && preyJ < 0 && hunger > 0.15)
+    U[Act.Explore] = Math.max(U[Act.Explore] as number, foodDrive * carn * 0.7);
+  if (
+    caps & Cap.Dig &&
+    adult &&
+    (sim.world.terrain.burrow[sim.world.terrain.index(homeX, homeY)] as number) < 0.8
+  ) {
+    U[Act.Dig] =
+      0.12 + (season === Season.Autumn || season === Season.Winter ? 0.25 : 0) * (1 - hunger);
   }
   if (caps & Cap.Store && season === Season.Autumn && energyFrac > 0.7) U[Act.Store] = 0.3;
-  if (caps & Cap.Migrate && (season === Season.Autumn || season === Season.Spring)) U[Act.Migrate] = 0.12 * (ph[P + T.Curiosity] as number);
-  if (caps & Cap.Hibernate && season === Season.Winter && (o.thermal[i] as number) < -0.15 && energyFrac > 0.35) U[Act.Hibernate] = 0.95;
+  if (caps & Cap.Migrate && (season === Season.Autumn || season === Season.Spring))
+    U[Act.Migrate] = 0.12 * (ph[P + T.Curiosity] as number);
+  if (
+    caps & Cap.Hibernate &&
+    season === Season.Winter &&
+    (o.thermal[i] as number) < -0.15 &&
+    energyFrac > 0.35
+  )
+    U[Act.Hibernate] = 0.95;
   // Winter caches.
-  if ((o.cache[i] as number) > 0.5 && hunger > 0.3) U[Act.Store] = Math.max(U[Act.Store] as number, foodDrive * 0.8);
+  if ((o.cache[i] as number) > 0.5 && hunger > 0.3)
+    U[Act.Store] = Math.max(U[Act.Store] as number, foodDrive * 0.8);
 
   // --- Customs: pushed by the player, followed according to plasticity and innate inclination ---
   const ls = sim.lineage(o.lineage[i] as number);
@@ -472,10 +597,12 @@ export function think(sim: ParcelSim, i: number): void {
     if (def) {
       const plast = der[Q + D.Plasticity] as number;
       let align = 0;
-      for (const [t, sign] of def.innate) align += sign > 0 ? (ph[P + t] as number) : 1 - (ph[P + t] as number);
+      for (const [t, sign] of def.innate)
+        align += sign > 0 ? (ph[P + t] as number) : 1 - (ph[P + t] as number);
       align /= Math.max(1, def.innate.length);
       const follow = Math.min(1, plast * 0.7 + align * 0.6);
-      for (const [act, mult] of def.boost) U[act] = (U[act] as number) * (1 + (mult - 1) * follow) + 0.05 * follow;
+      for (const [act, mult] of def.boost)
+        U[act] = (U[act] as number) * (1 + (mult - 1) * follow) + 0.05 * follow;
       // Acting against one's inclination is costly; those born inclined pay nothing (Baldwin effect).
       stress = Math.max(0, 0.65 - align) * (1 - 0.5 * plast) * 0.35;
     }
@@ -500,7 +627,19 @@ export function think(sim: ParcelSim, i: number): void {
       o.memFoodQ[i] = grazeRate;
     }
   }
-  setAction(sim, i, best, { threatJ, preyJ, mateJ, rivalJ, youngJ, grazeCell, carcass, gx, gy, gn, motherNear });
+  setAction(sim, i, best, {
+    threatJ,
+    preyJ,
+    mateJ,
+    rivalJ,
+    youngJ,
+    grazeCell,
+    carcass,
+    gx,
+    gy,
+    gn,
+    motherNear,
+  });
 }
 
 interface Targets {
@@ -534,7 +673,8 @@ function setAction(sim: ParcelSim, i: number, act: Act, t: Targets): void {
   o.tx[i] = x;
   o.ty[i] = y;
   // Leaving a hiding place or burrow.
-  if (act !== Act.Hide && act !== Act.Rest && act !== Act.Hibernate) o.flags[i] = (o.flags[i] as number) & ~(Flag.Hidden | Flag.Burrowed);
+  if (act !== Act.Hide && act !== Act.Rest && act !== Act.Hibernate)
+    o.flags[i] = (o.flags[i] as number) & ~(Flag.Hidden | Flag.Burrowed);
   switch (act) {
     case Act.Graze:
       o.tx[i] = (t.grazeCell % w) + 0.2 + rng.float() * 0.6;
@@ -573,7 +713,8 @@ function setAction(sim: ParcelSim, i: number, act: Act, t: Targets): void {
       // The prey reacts if it notices the hunter.
       const j = t.preyJ;
       const dj = Math.hypot((o.x[j] as number) - x, (o.y[j] as number) - y);
-      if (dj < sim.der(j, D.Perception) * detectability(sim, i)) o.nextThink[j] = Math.min(o.nextThink[j] as number, sim.tick + 1);
+      if (dj < sim.der(j, D.Perception) * detectability(sim, i))
+        o.nextThink[j] = Math.min(o.nextThink[j] as number, sim.tick + 1);
       break;
     }
     case Act.Scavenge:

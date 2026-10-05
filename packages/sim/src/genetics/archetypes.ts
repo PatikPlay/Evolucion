@@ -3,11 +3,11 @@ import type { SpeciesTemplate } from './templates';
 /** A fast, medium-sized hunter (the "native predator" and the selection experiments). */
 export const PREDATOR_TEMPLATE: SpeciesTemplate = {
   key: 'predator',
-  mass: 7,
+  mass: 6,
   traits: {
     carnivory: 0.88,
     fiberDigestion: 0.2,
-    legLength: 0.72,
+    legLength: 0.5,
     legStrength: 0.6,
     aggression: 0.72,
     fear: 0.2,

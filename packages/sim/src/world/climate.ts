@@ -36,6 +36,8 @@ export class Climate {
       this.cfg.climate.nightCooling * this.darknessNow;
     // Wetter in spring (phase ~0.1), drier late summer (~0.6).
     const phase = yearPhase(tick);
-    this.moistureNow = this.moistureFactor * (1 + this.cfg.climate.moistureSwing * Math.cos(2 * Math.PI * (phase - 0.1)));
+    this.moistureNow =
+      this.moistureFactor *
+      (1 + this.cfg.climate.moistureSwing * Math.cos(2 * Math.PI * (phase - 0.1)));
   }
 }

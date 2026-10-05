@@ -21,7 +21,8 @@ function bestPlant(sim: ParcelSim, i: number, c: number, consume: boolean): numb
   const veg = sim.world.vegetation;
   const q = i * DERIVED_COUNT;
   const der = o.derived;
-  const bite = sim.cfg.organisms.biteCoeff * (der[q + D.M075] as number);
+  const bite =
+    sim.cfg.organisms.biteCoeff * (der[q + D.M075] as number) * (o.feedShare[i] as number);
   const biome = sim.world.terrain.biome[c] as number;
   const grass = (veg.biomass[0] as Float32Array)[c] as number;
   const shrub = (veg.biomass[1] as Float32Array)[c] as number;
@@ -80,9 +81,16 @@ function bestPlant(sim: ParcelSim, i: number, c: number, consume: boolean): numb
       break;
   }
   // Plant toxins (browse and fruit), amplified during toxic blooms.
-  if (bestType === Food.Browse || bestType === Food.Fruit || (bestType === Food.Algae && sim.plantToxicity > 1)) {
+  if (
+    bestType === Food.Browse ||
+    bestType === Food.Fruit ||
+    (bestType === Food.Algae && sim.plantToxicity > 1)
+  ) {
     const tol = o.pheno[i * TRAIT_COUNT + T.PlantToxinTolerance] as number;
-    const dose = (bestType === Food.Browse ? 0.25 : bestType === Food.Algae ? 0.2 : 0.12) * sim.plantToxicity * (1 - tol);
+    const dose =
+      (bestType === Food.Browse ? 0.25 : bestType === Food.Algae ? 0.2 : 0.12) *
+      sim.plantToxicity *
+      (1 - tol);
     if (dose > 0.2) {
       o.health[i] = (o.health[i] as number) - (dose - 0.2) * 0.02;
       o.dmgCause[i] = Death.Toxin;
@@ -113,7 +121,12 @@ function faunaEfficiency(sim: ParcelSim, i: number, kind: FaunaKind): number {
       // Small, nimble animals catch insects; large ones barely bother.
       return (0.3 + 0.5 * carn) / (1 + mass / 3);
     case FaunaKind.SmallHerbivores:
-      return carn * Math.min(1.4, speed / 0.24) * (0.5 + 0.5 * Math.min(1, mass / 3)) * (0.6 + 0.4 * (o.pheno[p + T.Smell] as number));
+      return (
+        carn *
+        Math.min(1.4, speed / 0.24) *
+        (0.5 + 0.5 * Math.min(1, mass / 3)) *
+        (0.6 + 0.4 * (o.pheno[p + T.Smell] as number))
+      );
     case FaunaKind.Fish: {
       const swim = o.capabilities[i]! & Cap.Swim ? 1 : 0.2;
       return carn * swim;
@@ -122,7 +135,13 @@ function faunaEfficiency(sim: ParcelSim, i: number, kind: FaunaKind): number {
 }
 
 /** Energy per tick from hunting background fauna here. */
-export function faunaRate(sim: ParcelSim, i: number, x: number, y: number, consume: boolean): number {
+export function faunaRate(
+  sim: ParcelSim,
+  i: number,
+  x: number,
+  y: number,
+  consume: boolean,
+): number {
   const o = sim.org;
   const fauna = sim.world.fauna;
   const q = i * DERIVED_COUNT;

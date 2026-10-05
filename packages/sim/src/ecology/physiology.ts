@@ -24,7 +24,8 @@ export function updatePhysiology(sim: ParcelSim, i: number): void {
   const hibernating = (flags & Flag.Hibernating) !== 0;
 
   // --- Energy ---
-  let metab = oc.basalCoeff * m075 * (der[Q + D.MetabolicRate] as number) * (der[Q + D.UpkeepMult] as number);
+  let metab =
+    oc.basalCoeff * m075 * (der[Q + D.MetabolicRate] as number) * (der[Q + D.UpkeepMult] as number);
   if (flags & Flag.Pregnant) metab *= 1.25;
   if (hibernating) metab *= 0.18;
   else if (resting) metab *= 0.85;
@@ -39,7 +40,10 @@ export function updatePhysiology(sim: ParcelSim, i: number): void {
   if (flags & Flag.Burrowed) temp += (12 - temp) * 0.7 * (t.burrow[c] as number);
   else if (t.refuge[c]) temp += (12 - temp) * 0.5;
   else if (t.biome[c] === Biome.Forest) temp += (14 - temp) * 0.25;
-  const low = (der[Q + D.ComfortLow] as number) - (hibernating ? 10 : 0) - ((o.huddle[i] as number) >= 2 ? 3 : 0);
+  const low =
+    (der[Q + D.ComfortLow] as number) -
+    (hibernating ? 10 : 0) -
+    ((o.huddle[i] as number) >= 2 ? 3 : 0);
   const high = der[Q + D.ComfortHigh] as number;
   let thermalCost = 0;
   let thermal = 0;
@@ -48,7 +52,9 @@ export function updatePhysiology(sim: ParcelSim, i: number): void {
     thermalCost = metab * cfg.thermal.coldCost * deficit;
     thermal = -deficit / 10;
     if (deficit > cfg.thermal.damageMargin) {
-      o.health[i] = (o.health[i] as number) - cfg.thermal.damagePerDegree * (deficit - cfg.thermal.damageMargin);
+      o.health[i] =
+        (o.health[i] as number) -
+        cfg.thermal.damagePerDegree * (deficit - cfg.thermal.damageMargin);
       o.dmgCause[i] = Death.Cold;
     }
   } else if (temp > high) {
@@ -56,7 +62,8 @@ export function updatePhysiology(sim: ParcelSim, i: number): void {
     thermal = excess / 10;
     o.hydration[i] = (o.hydration[i] as number) - cfg.thermal.heatThirst * excess;
     if (excess > cfg.thermal.damageMargin) {
-      o.health[i] = (o.health[i] as number) - cfg.thermal.damagePerDegree * (excess - cfg.thermal.damageMargin);
+      o.health[i] =
+        (o.health[i] as number) - cfg.thermal.damagePerDegree * (excess - cfg.thermal.damageMargin);
       o.dmgCause[i] = Death.Heat;
     }
   }
@@ -106,8 +113,12 @@ export function updatePhysiology(sim: ParcelSim, i: number): void {
   // --- Water ---
   const heat = Math.max(0, temp - 22) / 10;
   const we = o.pheno[P + T.WaterEfficiency] as number;
-  const thirstMult = (1 - we * (0.15 + 0.45 * Math.min(1, heat))) * (1 + 0.6 * heat) * (sim.world.climate.moistureNow < 0.7 ? 1.3 : 1);
-  let hyd = (o.hydration[i] as number) - oc.thirstRate * thirstMult * (hibernating ? 0.2 : 1) * (1 + r);
+  const thirstMult =
+    (1 - we * (0.15 + 0.45 * Math.min(1, heat))) *
+    (1 + 0.6 * heat) *
+    (sim.world.climate.moistureNow < 0.7 ? 1.3 : 1);
+  let hyd =
+    (o.hydration[i] as number) - oc.thirstRate * thirstMult * (hibernating ? 0.2 : 1) * (1 + r);
   if (hyd <= 0) {
     hyd = 0;
     o.health[i] = (o.health[i] as number) - 0.01;
@@ -116,7 +127,11 @@ export function updatePhysiology(sim: ParcelSim, i: number): void {
   o.hydration[i] = hyd;
 
   // --- Fatigue ---
-  if (r > 0.6) o.fatigue[i] = Math.min(1, (o.fatigue[i] as number) + (oc.fatigueRunGain * r) / (der[Q + D.Endurance] as number));
+  if (r > 0.6)
+    o.fatigue[i] = Math.min(
+      1,
+      (o.fatigue[i] as number) + (oc.fatigueRunGain * r) / (der[Q + D.Endurance] as number),
+    );
   else o.fatigue[i] = Math.max(0, (o.fatigue[i] as number) - oc.fatigueRecover * (resting ? 2 : 1));
 
   // --- Healing and ageing ---

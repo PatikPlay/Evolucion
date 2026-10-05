@@ -101,12 +101,16 @@ export class OrganismStore {
   cache!: Float32Array;
   /** Conspecifics close enough to huddle with (refreshed on think). */
   huddle!: Uint8Array;
+  /** Share of feeding left after bigger neighbours push in (interference competition), 0–1. */
+  feedShare!: Float32Array;
   alleles!: Float32Array;
   delet!: Uint32Array;
   pheno!: Float32Array;
   derived!: Float32Array;
 
-  private static readonly SCALAR_FIELDS: ReadonlyArray<[keyof OrganismStore, new (n: number) => Typed, number]> = [
+  private static readonly SCALAR_FIELDS: ReadonlyArray<
+    [keyof OrganismStore, new (n: number) => Typed, number]
+  > = [
     ['alive', Uint8Array, 1],
     ['id', Uint32Array, 1],
     ['species', Uint16Array, 1],
@@ -158,6 +162,7 @@ export class OrganismStore {
     ['dmgCause', Uint8Array, 1],
     ['cache', Float32Array, 1],
     ['huddle', Uint8Array, 1],
+    ['feedShare', Float32Array, 1],
     ['alleles', Float32Array, ALLELES_PER_GENOME],
     ['delet', Uint32Array, 2],
     ['pheno', Float32Array, TRAIT_COUNT],
@@ -200,6 +205,7 @@ export class OrganismStore {
     this.id[i] = this.nextId++;
     this.target[i] = -1;
     this.motherIdx[i] = -1;
+    this.feedShare[i] = 1;
     this.liveCount++;
     return i;
   }

@@ -11,7 +11,8 @@ export function tryInfect(sim: ParcelSim, i: number, j: number): void {
   const strain = sim.strains.get(strainId);
   if (!strain) return;
   const res = o.pheno[j * TRAIT_COUNT + strain.resistance] as number;
-  if (sim.rngEcology.float() < strain.transmissibility * (1 - res) * (1 - res)) infect(sim, j, strainId);
+  if (sim.rngEcology.float() < strain.transmissibility * (1 - res) * (1 - res))
+    infect(sim, j, strainId);
 }
 
 export function infect(sim: ParcelSim, j: number, strainId: number): void {

@@ -1,6 +1,6 @@
 import type { ParcelSim, Region } from './parcel';
 import type { SpeciesTemplate } from './genetics/templates';
-import { Custom } from './behavior/customs';
+import type { Custom } from './behavior/customs';
 import { Death } from './behavior/actions';
 
 /**
@@ -18,10 +18,31 @@ export type SimCommand =
       name?: string;
       archetype?: string;
     }
-  | { type: 'climate'; tempAnomaly?: number; moistureFactor?: number; seasonalMult?: number; winterAnomaly?: number }
-  | { type: 'cull'; lineage?: number; species?: number; keep: number }
+  | {
+      type: 'climate';
+      tempAnomaly?: number;
+      moistureFactor?: number;
+      seasonalMult?: number;
+      winterAnomaly?: number;
+    }
+  | {
+      type: 'cull';
+      lineage?: number;
+      species?: number;
+      keep: number;
+      balanceSexes?: boolean;
+      near?: { x: number; y: number };
+    }
   | { type: 'setCustom'; lineage: number; custom: Custom }
-  | { type: 'lineageMods'; lineage: number; canalisation?: number; mutationMult?: number; feeding?: number; selectTrait?: number; selectDir?: number };
+  | {
+      type: 'lineageMods';
+      lineage: number;
+      canalisation?: number;
+      mutationMult?: number;
+      feeding?: number;
+      selectTrait?: number;
+      selectDir?: number;
+    };
 
 export function applyCommand(sim: ParcelSim, cmd: SimCommand): void {
   switch (cmd.type) {
@@ -49,7 +70,29 @@ export function applyCommand(sim: ParcelSim, cmd: SimCommand): void {
       if (cmd.species !== undefined) filter.species = cmd.species;
       const alive = sim.living(filter);
       sim.rngEcology.shuffle(alive);
-      for (let k = cmd.keep; k < alive.length; k++) sim.kill(alive[k] as number, Death.Culled, false);
+      if (cmd.near) {
+        // Survivors of a local refuge: the closest to a point (stable sort keeps the shuffle for ties).
+        const { x, y } = cmd.near;
+        const d = (i: number) =>
+          ((sim.org.x[i] as number) - x) ** 2 + ((sim.org.y[i] as number) - y) ** 2;
+        alive.sort((a, b) => d(a) - d(b));
+      }
+      if (cmd.balanceSexes) {
+        // Keep as many females as males (as far as possible).
+        const keepF = Math.ceil(cmd.keep / 2);
+        const keepM = cmd.keep - keepF;
+        let f = 0;
+        let m = 0;
+        for (const i of alive) {
+          const female = sim.org.sex[i] === 0;
+          if (female && f < keepF) f++;
+          else if (!female && m < keepM) m++;
+          else sim.kill(i, Death.Culled, false);
+        }
+        break;
+      }
+      for (let k = cmd.keep; k < alive.length; k++)
+        sim.kill(alive[k] as number, Death.Culled, false);
       break;
     }
     case 'setCustom':

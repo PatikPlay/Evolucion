@@ -1,0 +1,40 @@
+{
+  "name": "linaje",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @linaje/server --filter @linaje/client run dev",
+    "build": "pnpm --filter @linaje/client run build && pnpm --filter @linaje/server run build",
+    "host": "pnpm run build && node packages/server/dist/host.js",
+    "test": "vitest run --project fast",
+    "test:slow": "vitest run --project slow",
+    "test:all": "vitest run",
+    "test:e2e": "pnpm --filter @linaje/client run test:e2e",
+    "typecheck": "pnpm -r --no-bail run typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "sim:run": "tsx packages/sim/scripts/run.ts",
+    "sim:bench": "tsx packages/sim/scripts/bench.ts",
+    "sim:batch": "tsx packages/game/scripts/batch.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

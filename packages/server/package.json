@@ -1,0 +1,26 @@
+{
+  "name": "@linaje/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/dev.ts",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@linaje/game": "workspace:*",
+    "@linaje/protocol": "workspace:*",
+    "@linaje/sim": "workspace:*",
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.2"
+  }
+}

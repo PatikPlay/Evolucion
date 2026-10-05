@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+/out/
+/test-results/
+/playwright-report/
+/packages/*/dist/
+/packages/client/screenshots/actual/
+.vite/
+*.tsbuildinfo
+/batch-results/

@@ -48,32 +48,33 @@ test('three seeds give clearly different-looking populations', async ({ page }) 
   }
 });
 
-test('after 30 generations of cold, the population looks different', async ({ page }) => {
-  await open(page, 'seed=helada&years=0&scenario=cold');
+test('after 30 generations of predation, the population looks different', async ({ page }) => {
+  await open(page, 'seed=helada&years=0&scenario=predators');
   await focus(page, 5);
-  await page.screenshot({ path: `${OUT}/cold-before.png` });
+  await page.screenshot({ path: `${OUT}/predators-before.png` });
   const before = await means(page);
-  await open(page, 'seed=helada&years=32&scenario=cold');
+  await open(page, 'seed=helada&years=32&scenario=predators');
   await focus(page, 5);
-  await page.screenshot({ path: `${OUT}/cold-after.png` });
+  await page.screenshot({ path: `${OUT}/predators-after.png` });
   const after = await means(page);
-  const furIndex = 11;
-  const sizeIndex = 0;
+  const legIndex = 2;
   console.log(
-    `fur ${before[furIndex]?.toFixed(2)} → ${after[furIndex]?.toFixed(2)}, size ${before[sizeIndex]?.toFixed(2)} → ${after[sizeIndex]?.toFixed(2)}`,
+    `leg length ${before[legIndex]?.toFixed(2)} → ${after[legIndex]?.toFixed(2)} (of 16 levels)`,
   );
-  // A visible coat or body change of at least two quantisation levels.
-  const change = Math.max(
-    Math.abs((after[furIndex] as number) - (before[furIndex] as number)),
-    Math.abs((after[sizeIndex] as number) - (before[sizeIndex] as number)),
-  );
-  expect(change).toBeGreaterThanOrEqual(2);
+  // Longer legs by at least two quantisation levels: visible at a glance.
+  expect((after[legIndex] as number) - (before[legIndex] as number)).toBeGreaterThanOrEqual(2);
 });
 
 test('client benchmark with 2000 creatures', async ({ page }) => {
   await page.goto('/?bench=2000');
   await page.waitForFunction(() => document.body.dataset.fps, null, { timeout: 60_000 });
   const fps = Number(await page.evaluate(() => document.body.dataset.fps));
+  const cpu = Number(await page.evaluate(() => document.body.dataset.updateMs));
+  console.log(
+    `2000 creatures: creature update ${cpu.toFixed(2)} ms of CPU per frame (budget at 60 fps: 16.7 ms)`,
+  );
+  // The JavaScript side must leave room for 60 fps; GPU time depends on the machine.
+  expect(cpu).toBeLessThan(6);
   console.log(
     `2000 creatures: ${fps.toFixed(1)} fps (software rendering in CI; target 60 fps on a mid-range GPU)`,
   );

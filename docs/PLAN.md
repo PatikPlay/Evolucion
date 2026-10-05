@@ -38,14 +38,14 @@ Interfaces primero: `sim` expone `createParcel(spec)`, `ParcelSim.step()`, `appl
 
 ## H2 · Verlo
 
-- [ ] Grabación en `sim`: fotogramas, definiciones visuales cuantizadas, estados de animación, búfer circular.
-- [ ] `protocol`: tipos de terreno, fotogramas y definiciones visuales; codec binario.
-- [ ] Servidor mínimo de desarrollo que simula una parcela y emite en directo.
-- [ ] Cliente: terreno en acuarela, vegetación, fauna ambiental, criaturas procedurales con caché de texturas y animación por estado.
-- [ ] Cámara (arrastrar, zoom), seguir e inspeccionar (ficha cualitativa).
-- [ ] Overlay de depuración solo con `LINAJE_DEBUG=1`.
-- [ ] Playwright: capturas de 3 semillas distintas; antes y después de 30 generaciones de presión.
-- [ ] Benchmark del cliente con 2000 criaturas (fps).
+- [x] Grabación en `sim`: fotogramas, definiciones visuales cuantizadas, estados de animación, búfer circular.
+- [x] `protocol`: tipos de terreno, fotogramas y definiciones visuales; codec binario.
+- [x] Servidor mínimo de desarrollo que simula una parcela y emite en directo.
+- [x] Cliente: terreno en acuarela, vegetación, fauna ambiental, criaturas procedurales con caché de texturas y animación por estado.
+- [x] Cámara (arrastrar, zoom), seguir e inspeccionar (ficha cualitativa).
+- [x] Overlay de depuración solo con `LINAJE_DEBUG=1`.
+- [x] Playwright: capturas de 3 semillas distintas; antes y después de 30 generaciones de presión.
+- [x] Benchmark del cliente con 2000 criaturas (fps).
 
 ## H3 · Jugarlo (un jugador)
 

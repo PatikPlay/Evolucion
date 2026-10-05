@@ -164,8 +164,8 @@ export const DEFAULT_SIM_CONFIG = {
     halfMass: 1.6,
   },
   thermal: {
-    comfortLowBase: 13,
-    comfortHighBase: 27,
+    comfortLowBase: 9.8,
+    comfortHighBase: 25,
     /** Extra metabolism per degree below the comfort zone, as a fraction of basal. */
     coldCost: 0.08,
     heatThirst: 0.0007,

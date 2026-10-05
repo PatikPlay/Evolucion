@@ -1,6 +1,13 @@
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Sprite, Texture } from 'pixi.js';
 import { ANIM_KEYS, FrameFlag, V, type Frame, type FrameRecord } from '@linaje/protocol';
-import { bodyLength, bodyPlan, paintCreature, planKey, TEXTURE_SIZE } from './painter';
+import {
+  bodyLength,
+  bodyPlan,
+  paintCreature,
+  planKey,
+  TEXTURE_SIZE,
+  type BodyPlan,
+} from './painter';
 import { CELL_PX } from './terrain';
 import { creatureColor, PLAYER_COLORS } from './palette';
 
@@ -12,7 +19,7 @@ const A = Object.fromEntries(ANIM_KEYS.map((k, i) => [k, i])) as Record<
 interface Entry {
   id: number;
   sprite: Sprite;
-  ring: Graphics | null;
+  ring: Sprite | null;
   def: readonly number[];
   frames: Texture[];
   /** World length in cells of an adult. */
@@ -34,23 +41,60 @@ interface Entry {
   y: number;
 }
 
-/** Texture cache keyed by binned body plan; three walk frames each. */
+/**
+ * Texture cache keyed by binned body plan; three walk frames each. Bounded:
+ * once full, a new plan reuses the texture of the most similar cached plan.
+ */
 class TextureCache {
-  private map = new Map<string, { frames: Texture[]; length: number }>();
+  private map = new Map<string, { frames: Texture[]; length: number; plan: BodyPlan }>();
+  constructor(private readonly max = 400) {}
+
   get(v: readonly number[]): { frames: Texture[]; length: number } {
     const plan = bodyPlan(v);
     const key = planKey(plan);
     let t = this.map.get(key);
-    if (!t) {
-      const frames = ([0, 1, 2] as const).map((f) => Texture.from(paintCreature(plan, f)));
-      t = { frames, length: bodyLength(plan) };
-      this.map.set(key, t);
-    }
+    if (t) return t;
+    if (this.map.size >= this.max) return this.nearest(plan);
+    const frames = ([0, 1, 2] as const).map((f) => Texture.from(paintCreature(plan, f)));
+    t = { frames, length: bodyLength(plan), plan };
+    this.map.set(key, t);
     return t;
   }
+
+  private nearest(p: BodyPlan): { frames: Texture[]; length: number } {
+    let best: { frames: Texture[]; length: number } | null = null;
+    let bd = Infinity;
+    for (const t of this.map.values()) {
+      let d = 0;
+      for (const k of Object.keys(p) as (keyof BodyPlan)[]) d += Math.abs(p[k] - t.plan[k]);
+      if (d < bd) {
+        bd = d;
+        best = t;
+      }
+    }
+    return best as { frames: Texture[]; length: number };
+  }
+
   get size(): number {
     return this.map.size;
   }
+}
+
+let RING: Texture | null = null;
+/** Shared ellipse outline used for every owner ring (tinted per player). */
+function ringTexture(): Texture {
+  if (RING) return RING;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
+  const g = c.getContext('2d') as CanvasRenderingContext2D;
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.ellipse(32, 32, 29, 29, 0, 0, Math.PI * 2);
+  g.stroke();
+  RING = Texture.from(c);
+  return RING;
 }
 
 /** World length (cells) of an adult from its size level (length ∝ mass^1/3). */
@@ -115,11 +159,14 @@ export class CreatureLayer {
       const adultCells = adultLength(v[V.size] ?? 8);
       const baseScale = (adultCells * CELL_PX) / ((tex.length / TEXTURE_SIZE) * 2 * TEXTURE_SIZE);
       const owner = def[2] as number;
-      let ring: Graphics | null = null;
+      let ring: Sprite | null = null;
       if (owner < PLAYER_COLORS.length) {
-        ring = new Graphics()
-          .ellipse(0, 0, adultCells * CELL_PX * 0.62, adultCells * CELL_PX * 0.4)
-          .stroke({ width: 0.6, color: PLAYER_COLORS[owner] ?? 0xffffff, alpha: 0.55 });
+        ring = new Sprite(ringTexture());
+        ring.anchor.set(0.5);
+        ring.tint = PLAYER_COLORS[owner] ?? 0xffffff;
+        ring.alpha = 0.6;
+        ring.width = adultCells * CELL_PX * 1.3;
+        ring.height = adultCells * CELL_PX * 0.85;
         this.container.addChild(ring);
       }
       this.container.addChild(sprite);
@@ -160,8 +207,12 @@ export class CreatureLayer {
     e.seen = seen;
   }
 
+  /** Milliseconds spent in the last update (CPU side), smoothed. */
+  updateMs = 0;
+
   /** Positions and animates every sprite for the current display time. */
   update(now: number, dtMs: number): void {
+    const t0 = performance.now();
     const t = Math.min(1, Math.max(0, (now - this.frameAt) / this.frameInterval));
     for (const e of this.entries.values()) {
       const x = e.px + (e.nx - e.px) * t;
@@ -216,9 +267,11 @@ export class CreatureLayer {
         e.ring.x = s.x;
         e.ring.y = s.y;
         e.ring.rotation = s.rotation;
-        e.ring.scale.set(growth);
+        e.ring.width = e.adultCells * CELL_PX * 1.3 * growth;
+        e.ring.height = e.adultCells * CELL_PX * 0.85 * growth;
       }
     }
+    this.updateMs = this.updateMs * 0.9 + (performance.now() - t0) * 0.1;
   }
 
   /** Nearest creature to a world point (cells) within `radius` cells. */

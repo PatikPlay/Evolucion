@@ -8,8 +8,8 @@ Documento vivo para retomar el trabajo en frío. Plan detallado en `docs/PLAN.md
 |---|---|
 | H0 · Cimientos | ✅ Cerrado |
 | H1 · Ecosistema headless | ✅ Cerrado |
-| H2 · Verlo | ⏳ En curso |
-| H3 · Jugarlo (un jugador) | — |
+| H2 · Verlo | ✅ Cerrado |
+| H3 · Jugarlo (un jugador) | ⏳ Siguiente |
 | H4 · Multijugador LAN | — |
 | H5 · Gran Intercambio | — |
 | H6 · Bots y equilibrio | — |
@@ -39,15 +39,21 @@ Documento vivo para retomar el trabajo en frío. Plan detallado en `docs/PLAN.md
 
 Herramientas de afinado: `packages/sim/scripts/tune.sh <años> '<config json>'` y `packages/sim/scripts/experiment.sh <a|b|c|d> <semillas>`.
 
-## En curso: H2 · Verlo
-- Hecho: `protocol` (tipos visuales cuantizados, codec binario de fotogramas, terreno, vegetación y fauna; validador de lista blanca de mensajes), `game/view` (proyección visual, fichas cualitativas), servidor de desarrollo (`pnpm dev`) con sesión «en directo», cliente Pixi + Preact (terreno en acuarela, vegetación, fauna ambiental, criaturas procedurales con caché de texturas, animación según conducta, cámara, seguir, inspeccionar, overlay de depuración con `LINAJE_DEBUG=1`), test de información oculta por WebSocket.
-- Playwright (`pnpm test:e2e`): las capturas de 3 semillas pasan (poblaciones claramente distintas).
-- Pendiente: el cambio visible tras 30 generaciones de frío es pequeño (pelaje +1 nivel); el benchmark de 2000 criaturas genera demasiadas texturas distintas.
+### H2 · Verlo
+- `protocol`: definiciones visuales cuantizadas (18 parámetros visibles a 16 niveles), codec binario de fotogramas, terreno, vegetación y fauna; validador de lista blanca de mensajes y lista de claves prohibidas.
+- `game/view`: proyección visual de cada criatura, banderas de estado visibles, ficha de campo cualitativa (claves i18n, sin números).
+- Servidor de desarrollo (`pnpm dev`): sesión «en directo» de una parcela con escenarios (sin presión, depredadores, frío), velocidad variable, inspección; todo mensaje pasa por la lista blanca; overlay de depuración solo con `LINAJE_DEBUG=1`.
+- Cliente PixiJS + Preact: terreno en acuarela, vegetación y fruto, fauna ambiental, criaturas procedurales (cabeza, patas, cola, aletas, membranas, coraza, espinas, pelaje, manchas, rayas, ojos) con caché acotada de texturas por plan corporal y color por tinte, animación según la conducta, interpolación entre fotogramas, cámara (arrastrar, rueda, flechas, `0`), seguir e inspeccionar con retrato.
+- Simulación: reglas de Bergmann y Allen en el confort térmico (el pelaje, el tamaño y las extremidades son las palancas visibles del frío).
+- Tests: información oculta por WebSocket (servidor real); Playwright (`pnpm test:e2e`) con capturas de 3 semillas (poblaciones claramente distintas), antes/después de 32 años de depredación (patas +3 niveles) y benchmark de 2000 criaturas (1,7 ms de CPU por fotograma; los fps de CI son de renderizado por software).
+
+**Cómo probarlo:**
+1. `pnpm dev` y abre `http://localhost:5173/?seed=prueba&years=3`: verás la parcela en directo; rueda para acercar, clic en una criatura para su ficha, «Seguir» para acompañarla.
+2. `LINAJE_DEBUG=1 pnpm dev` y pulsa `d` en el visor: overlay con los datos ocultos (solo desarrollo).
+3. `pnpm test:e2e` genera las capturas en `packages/client/screenshots/`.
 
 ## Siguiente paso concreto
-1. Reglas de Allen y Bergmann en el confort térmico (extremidades cortas y pelaje como palancas visibles del frío) y comprobar la captura antes/después.
-2. Benchmark del cliente con poblaciones realistas (especies con variación individual) y límite de caché de texturas.
-3. Cerrar H2 y empezar H3.
+H3: máquina de estados de la partida en `game` (fundadores → rondas de decisión y simulación), Influencia, catálogo data-driven de acciones con sus comandos de simulación, costumbres, cuaderno de campo con observaciones estructuradas, momentos clave con clips, director de eventos, invasores, relevo de linaje, remanente latente y radiación adaptativa; y en el cliente, la interfaz de una partida de un jugador.
 
 ## Problemas conocidos
 - La capacidad real de las parcelas varía (≈ 450–2500 individuos en equilibrio según el mapa) aunque la productividad esté normalizada: hay que calibrar empíricamente al crear la partida (antes de H5).

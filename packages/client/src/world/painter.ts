@@ -35,7 +35,7 @@ const bin = (v: number, bins: number) => Math.min(bins - 1, Math.floor(((v + 0.5
 export function bodyPlan(v: readonly number[]): BodyPlan {
   return {
     elong: bin(v[V.elongation] ?? 8, 6),
-    legLen: bin(v[V.legLength] ?? 8, 6),
+    legLen: bin(v[V.legLength] ?? 8, 8),
     legPairs: v[V.legCount] ?? 2,
     legStr: bin(v[V.legStrength] ?? 8, 4),
     prehensile: bin(v[V.prehensile] ?? 0, 3),
@@ -163,7 +163,7 @@ export function paintCreature(
 
   // --- Legs (top view: they stick out of the flanks) ---
   if (!legless) {
-    const legLen = 2.5 + p.legLen * 2.1;
+    const legLen = 2 + p.legLen * 2.2;
     const legW = 1.2 + p.legStr * 0.8;
     const pairs = p.legPairs;
     for (let k = 0; k < pairs; k++) {

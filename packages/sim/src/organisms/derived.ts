@@ -57,14 +57,22 @@ export function computeDerived(s: OrganismStore, i: number, cfg: SimConfig): voi
     up.fins * tr(T.Fins) +
     up.membranes * tr(T.Membranes);
   const logSize = Math.log2(sizeRatio);
+  // Thermal comfort. Coat and body size are the main (visible) levers; Allen's
+  // rule: long tails and legs lose heat in the cold and shed it in the heat.
+  const extremities = 2.5 * tr(T.Tail) + 2 * tr(T.LegLength);
   d[q + D.ComfortLow] =
     cfg.thermal.comfortLowBase -
-    14 * tr(T.ColdTolerance) -
-    12 * tr(T.Fur) -
+    9 * tr(T.ColdTolerance) -
+    15 * tr(T.Fur) -
     3 * tr(T.FatReserves) -
-    2.5 * logSize;
+    3 * logSize +
+    extremities;
   d[q + D.ComfortHigh] =
-    cfg.thermal.comfortHighBase + 12 * tr(T.HeatTolerance) - 8 * tr(T.Fur) - 1.5 * logSize;
+    cfg.thermal.comfortHighBase +
+    12 * tr(T.HeatTolerance) -
+    8 * tr(T.Fur) -
+    1.5 * logSize +
+    extremities;
   d[q + D.Visibility] =
     (0.45 + 0.7 * tr(T.Conspicuous)) * Math.min(1.8, Math.max(0.5, Math.pow(sizeRatio, 0.3)));
   d[q + D.Endurance] = 0.5 + 0.7 * metab + 0.3 * tr(T.LegStrength);

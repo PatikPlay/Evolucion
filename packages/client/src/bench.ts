@@ -28,13 +28,20 @@ export async function runBench(root: HTMLElement, n: number): Promise<void> {
     barrier: new Uint8Array(size * size),
     marks: new Uint8Array(size * size),
   });
+  // Realistic variety: six species, individuals varying around their species' look.
   const defs: number[][] = [];
   const pos: { x: number; y: number; h: number }[] = [];
+  const species = Array.from({ length: 6 }, () =>
+    new Array<number>(VISUAL_COUNT).fill(0).map(() => 2 + Math.floor(Math.random() * 12)),
+  );
   for (let k = 0; k < n; k++) {
-    const v = new Array<number>(VISUAL_COUNT).fill(0).map(() => Math.floor(Math.random() * 16));
+    const sp = k % species.length;
+    const v = (species[sp] as number[]).map((x) =>
+      Math.max(0, Math.min(15, x + Math.round((Math.random() - 0.5) * 3))),
+    );
     v[3] = 2;
-    defs.push([k + 1, 1 + (k % 5), k % 6, ...v]);
-    pos.push({ x: 20 + Math.random() * 70, y: 20 + Math.random() * 70, h: Math.random() * 6.28 });
+    defs.push([k + 1, 1 + sp, sp, ...v]);
+    pos.push({ x: 10 + Math.random() * 76, y: 10 + Math.random() * 76, h: Math.random() * 6.28 });
   }
   world.creatures.setDefs(defs);
   let tick = 0;
@@ -61,8 +68,9 @@ export async function runBench(root: HTMLElement, n: number): Promise<void> {
     else {
       const fps = (frames * 1000) / (performance.now() - t0);
       document.body.dataset.fps = fps.toFixed(1);
+      document.body.dataset.updateMs = world.creatures.updateMs.toFixed(2);
       (document.getElementById('bench-out') as HTMLElement).textContent =
-        `${n} criaturas: ${fps.toFixed(1)} fps`;
+        `${n} criaturas: ${fps.toFixed(1)} fps · CPU por fotograma ${world.creatures.updateMs.toFixed(2)} ms`;
     }
   };
   requestAnimationFrame(count);
